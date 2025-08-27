@@ -1,14 +1,5 @@
 # Gemini API Provider for Moodle
 
-{{Infobox plugin
-|type = aiprovider
-|entry = [aiprovider_gemini](https://moodle.org/plugins/view/aiprovider_gemini)
-|tracker = [GitHub Issues](https://github.com/your-repo/aiprovider_gemini/issues)
-|discussion = [Moodle General Plugins Forum](https://moodle.org/mod/forum/view.php?id=47)
-|maintainer = [Andrea Bertelli](https://docs.moodle.org/User/Andrea_Bertelli)
-|float = right
-}}
-
 ## Overview
 
 The Gemini API Provider plugin integrates Google's Gemini AI models into Moodle's AI framework, enabling powerful AI capabilities across your learning management system. This plugin supports text generation, image generation, and text summarization using Google's state-of-the-art AI models.
