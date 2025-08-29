@@ -124,7 +124,7 @@ class process_generate_text extends abstract_processor {
         $bodycandidate = $responsebody->candidates[0] ?? null;
         return [
             'success' => true,
-            'id' => $bodyobj->responseId,
+            'id' => $responsebody->responseId,
             'generatedcontent' => $bodycandidate->content->parts[0]->text,
             'finishreason' => $bodycandidate->finishReason ?? 'unknown',
             'prompttokens' => $usagemetadata->promptTokenCount,

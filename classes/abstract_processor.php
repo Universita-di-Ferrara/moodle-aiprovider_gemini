@@ -94,7 +94,6 @@ abstract class abstract_processor extends process_base {
                 'base_uri' => $this->get_endpoint(),
                 RequestOptions::HTTP_ERRORS => false,
             ]);
-
         } catch (RequestException $e) {
             // Handle any exceptions.
             return [

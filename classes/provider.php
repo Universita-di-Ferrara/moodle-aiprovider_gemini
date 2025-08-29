@@ -230,7 +230,6 @@ class provider extends \core_ai\provider {
 
         $models = [];
         try {
-
             do {
                 $response = $client->send($request);
                 if ($response->getStatusCode() !== 200) {
@@ -243,15 +242,12 @@ class provider extends \core_ai\provider {
                 * Filter models based on the action name.
                 */
                 if ($actionname === 'generate_text' || $actionname === 'summarise_text') {
-
                     // Regex to filter model "gemini-version-tipo".
                     $pattern = '/^models\/gemini-\d+(\.\d+)?(-\d+)?-(pro|flash|flash-lite)(-8b)?$/';
                 } else if ($actionname === 'generate_image') {
-
                     // Regex to filter imagen models, only stable versions.
                     // Struttura: models/imagen-x.y-generate-<numero>.
                     $pattern = '/^models\/imagen-\d+(\.\d+)?(-[a-z]+)?-generate-\d+$/i';
-
                 } else {
                     return [];
                 }
@@ -270,7 +266,6 @@ class provider extends \core_ai\provider {
             } while ($bodyobj->nextPageToken);
 
             return $models;
-
         } catch (\Exception $e) {
             return [new \lang_string("getallmodels_error", "aiprovider_gemini")];  // Return error array on exception.
         }
