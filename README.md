@@ -24,7 +24,7 @@ The Gemini API Provider plugin integrates Google's Gemini AI models into Moodle'
 
 ### Prerequisites
 
-- Moodle 4.1+ (requires 2024100100)
+- Moodle 4.5+
 - PHP 8.0 or higher
 - Valid Google AI Studio API key
 
@@ -148,14 +148,6 @@ We welcome contributions! Please:
 2. Create a feature branch
 3. Make your changes
 4. Submit a pull request
-
-## Version History
-
-### Version 2025082700 (Current)
-- Initial stable release
-- Support for text generation, image generation, and text summarization
-- Rate limiting capabilities
-- Multiple model support
 
 ## License
 
