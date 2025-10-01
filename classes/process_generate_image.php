@@ -36,16 +36,6 @@ class process_generate_image extends abstract_processor {
     /** @var int The number of images to generate. */
     private int $numberimages = 1;
 
-    #[\Override]
-    protected function get_endpoint(): UriInterface {
-        return new Uri(get_config('aiprovider_gemini', 'action_generate_image_endpoint'));
-    }
-
-    #[\Override]
-    protected function get_model(): string {
-        return get_config('aiprovider_gemini', 'action_generate_image_model');
-    }
-
 
     #[\Override]
     protected function query_ai_api(): array {
@@ -147,6 +137,13 @@ class process_generate_image extends abstract_processor {
             'imageSize' => $this->calculate_image_quality($this->action->get_configuration('quality')),
             'languageCode' => 'en', // Force English for best results.
         ];
+
+        // Append the extra model settings. Check if Gemini supports them.
+        $modelsettings = $this->get_model_settings();
+        foreach ($modelsettings as $setting => $value) {
+            $requestobj->$setting = $value;
+        }
+
         return new Request(
             method: 'POST',
             uri: '',

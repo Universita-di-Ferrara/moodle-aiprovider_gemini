@@ -16,13 +16,9 @@
 
 namespace aiprovider_gemini;
 
-use core_ai\aiactions;
-use core_ai\rate_limiter;
-use GuzzleHttp\Psr7\Request;
-use GuzzleHttp\Psr7\Uri;
+use core_ai\form\action_settings_form;
 use Psr\Http\Message\RequestInterface;
-use Psr\Http\Message\ResponseInterface;
-use Psr\Http\Message\UriInterface;
+use GuzzleHttp\Psr7\Request;
 use core\http_client;
 
 /**
@@ -34,61 +30,20 @@ use core\http_client;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class provider extends \core_ai\provider {
-    /** @var string The Google AI Studio - Gemini API key. */
-    private string $apikey;
-
-    /** @var bool Is global rate limiting for the API enabled. */
-    private bool $enableglobalratelimit;
-
-    /** @var int The global rate limit. */
-    private int $globalratelimit;
-
-    /** @var bool Is user rate limiting for the API enabled */
-    private bool $enableuserratelimit;
-
-    /** @var int The user rate limit. */
-    private int $userratelimit;
-
-    /**
-     * Class constructor.
-     */
-    public function __construct() {
-        // Get api key from config.
-        $this->apikey = get_config('aiprovider_gemini', 'apikey');
-        // Get global rate limit from config.
-        $this->enableglobalratelimit = get_config('aiprovider_gemini', 'enableglobalratelimit');
-        $this->globalratelimit = get_config('aiprovider_gemini', 'globalratelimit');
-        // Get user rate limit from config.
-        $this->enableuserratelimit = get_config('aiprovider_gemini', 'enableuserratelimit');
-        $this->userratelimit = get_config('aiprovider_gemini', 'userratelimit');
-    }
 
     /**
      * Get the list of actions that this provider supports.
      *
      * @return array An array of action class names.
      */
-    public function get_action_list(): array {
+    public static function get_action_list(): array {
         return [
             \core_ai\aiactions\generate_text::class,
             \core_ai\aiactions\generate_image::class,
             \core_ai\aiactions\summarise_text::class,
-        ];
-    }
+            \core_ai\aiactions\explain_text::class,
 
-    /**
-     * Generate a user id.
-     *
-     * This is a hash of the site id and user id,
-     * this means we can determine who made the request
-     * but don't pass any personal data to OpenAI.
-     *
-     * @param string $userid The user id.
-     * @return string The generated user id.
-     */
-    public function generate_userid(string $userid): string {
-        global $CFG;
-        return hash('sha256', $CFG->siteidentifier . $userid);
+        ];
     }
 
     /**
@@ -99,118 +54,51 @@ class provider extends \core_ai\provider {
      */
     public function add_authentication_headers(RequestInterface $request): RequestInterface {
         return $request
-            ->withAddedHeader('x-goog-api-key', $this->apikey);
+            ->withAddedHeader('x-goog-api-key', $this->config['apikey']);
     }
 
     #[\Override]
-    public function is_request_allowed(aiactions\base $action): array|bool {
-        $ratelimiter = \core\di::get(rate_limiter::class);
-        $component = \core\component::get_component_from_classname(get_class($this));
-
-        // Check the user rate limit.
-        if ($this->enableuserratelimit) {
-            if (!$ratelimiter->check_user_rate_limit(
-                component: $component,
-                ratelimit: $this->userratelimit,
-                userid: $action->get_configuration('userid')
-            )) {
-                return [
-                    'success' => false,
-                    'errorcode' => 429,
-                    'errormessage' => 'User rate limit exceeded',
-                ];
-            }
-        }
-
-        // Check the global rate limit.
-        if ($this->enableglobalratelimit) {
-            if (!$ratelimiter->check_global_rate_limit(
-                component: $component,
-                ratelimit: $this->globalratelimit
-            )) {
-                return [
-                    'success' => false,
-                    'errorcode' => 429,
-                    'errormessage' => 'Global rate limit exceeded',
-                ];
-            }
-        }
-
-        return true;
-    }
-
-    /**
-     * Get any action settings for this provider.
-     *
-     * @param string $action The action class name.
-     * @param \admin_root $ADMIN The admin root object.
-     * @param string $section The section name.
-     * @param bool $hassiteconfig Whether the current user has moodle/site:config capability.
-     * @return array An array of settings.
-     */
-    public function get_action_settings(
+    public static function get_action_settings(
         string $action,
-        \admin_root $ADMIN,
-        string $section,
-        bool $hassiteconfig
-    ): array {
+        array $customdata = [],
+    ): action_settings_form|bool {
         $actionname = substr($action, (strrpos($action, '\\') + 1));
-        $settings = [];
-        if ($actionname === 'generate_text' || $actionname === 'summarise_text') {
-            // Add the model setting.
-            $settings[] = new \admin_setting_configselect(
-                "aiprovider_gemini/action_{$actionname}_model",
-                new \lang_string("action:{$actionname}:model", 'aiprovider_gemini'),
-                new \lang_string("action:{$actionname}:model_desc", 'aiprovider_gemini'),
-                'gemini-2.5-flash',
-                $this->get_all_models($actionname),
-            );
-            // Add API endpoint.
-            $settings[] = new \admin_setting_configtext(
-                "aiprovider_gemini/action_{$actionname}_endpoint",
-                new \lang_string("action:{$actionname}:endpoint", 'aiprovider_gemini'),
-                '',
-                'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',
-                PARAM_URL,
-            );
-            // Add system instruction settings.
-            $settings[] = new \admin_setting_configtextarea(
-                "aiprovider_gemini/action_{$actionname}_systeminstruction",
-                new \lang_string("action:{$actionname}:systeminstruction", 'aiprovider_gemini'),
-                new \lang_string("action:{$actionname}:systeminstruction_desc", 'aiprovider_gemini'),
-                $action::get_system_instruction(),
-                PARAM_TEXT
-            );
+        $customdata['actionname'] = $actionname;
+        $customdata['action'] = $action;
+        if ($actionname === 'generate_text' || $actionname === 'summarise_text' || $actionname === 'explain_text') {
+            return new form\action_generate_text_form(customdata: $customdata);
         } else if ($actionname === 'generate_image') {
-            // Add the model setting.
-            $settings[] = new \admin_setting_configselect(
-                "aiprovider_gemini/action_{$actionname}_model",
-                new \lang_string("action:{$actionname}:model", 'aiprovider_gemini'),
-                new \lang_string("action:{$actionname}:model_desc", 'aiprovider_gemini'),
-                'imagen-3.0-generate-002',
-                $this->get_all_models($actionname),
-            );
-            // Add API endpoint.
-            $settings[] = new \admin_setting_configtext(
-                "aiprovider_gemini/action_{$actionname}_endpoint",
-                new \lang_string("action:{$actionname}:endpoint", 'aiprovider_gemini'),
-                '',
-                'https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict',
-                PARAM_URL,
-            );
-            // Imagen does not support system instructions.
+            return new form\action_generate_image_form(customdata: $customdata);
         }
 
-        return $settings;
+        return false;
     }
 
+    #[\Override]
+    public static function get_action_setting_defaults(string $action): array {
+        $actionname = substr($action, (strrpos($action, '\\') + 1));
+        $customdata = [
+            'actionname' => $actionname,
+            'action' => $action,
+            'providername' => 'aiprovider_openai',
+        ];
+        if ($actionname === 'generate_text' || $actionname === 'summarise_text' || $actionname === 'explain_text') {
+            $mform = new form\action_generate_text_form(customdata: $customdata);
+            return $mform->get_defaults();
+        } else if ($actionname === 'generate_image') {
+            $mform = new form\action_generate_image_form(customdata: $customdata);
+            return $mform->get_defaults();
+        }
+
+        return [];
+    }
     /**
      * Check this provider has the minimal configuration to work.
      *
      * @return bool Return true if configured.
      */
     public function is_provider_configured(): bool {
-        return !empty($this->apikey);
+        return !empty($this->config['apikey']);
     }
 
     /**

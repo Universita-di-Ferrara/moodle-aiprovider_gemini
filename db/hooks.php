@@ -14,19 +14,25 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-namespace aiprovider_gemini;
-
-use GuzzleHttp\Psr7\Uri;
-use Psr\Http\Message\UriInterface;
-
 /**
- * Class process text summarisation.
+ * Hook listener callbacks for the Gemini provider.
  *
  * @package    aiprovider_gemini
  * @copyright  2025 University of Ferrara, Italy
  * @author     Andrea Bertelli <andrea.bertelli@unife.it>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class process_summarise_text extends process_generate_text {
 
-}
+defined('MOODLE_INTERNAL') || die();
+
+$callbacks = [
+    [
+        'hook' => \core_ai\hook\after_ai_provider_form_hook::class,
+        'callback' => \aiprovider_gemini\hook_listener::class . '::set_form_definition_for_aiprovider_gemini',
+    ],
+
+    [
+        'hook' => \core_ai\hook\after_ai_action_settings_form_hook::class,
+        'callback' => \aiprovider_gemini\hook_listener::class . '::set_model_form_definition_for_aiprovider_gemini',
+    ],
+];

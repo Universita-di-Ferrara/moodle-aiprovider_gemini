@@ -14,19 +14,27 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-namespace aiprovider_gemini;
-
-use GuzzleHttp\Psr7\Uri;
-use Psr\Http\Message\UriInterface;
+namespace aiprovider_gemini\aimodel;
 
 /**
- * Class process text summarisation.
+ * Gemini base AI model interface.
  *
  * @package    aiprovider_gemini
- * @copyright  2025 University of Ferrara, Italy
- * @author     Andrea Bertelli <andrea.bertelli@unife.it>
+ * @copyright  University of Ferrara, Italy
+ * @author     Andrea Bertelli <andrea.bertell@unife.it>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class process_summarise_text extends process_generate_text {
+interface gemini_base {
 
+    /** @var int MODEL_TYPE_TEXT Text model type. */
+    public const MODEL_TYPE_TEXT = 1;
+    /** @var int MODEL_TYPE_IMAGE Image model type. */
+    public const MODEL_TYPE_IMAGE = 2;
+
+    /**
+     * Get model type.
+     *
+     * @return array Model type.
+     */
+    public function model_type(): array;
 }

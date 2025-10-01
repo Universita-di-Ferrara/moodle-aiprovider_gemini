@@ -23,6 +23,11 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+$string['action:explain_text:endpoint'] = 'API endpoint';
+$string['action:explain_text:model'] = 'AI model';
+$string['action:explain_text:model_help'] = 'The model used to explain the provided text.';
+$string['action:explain_text:systeminstruction'] = 'System instruction';
+$string['action:explain_text:systeminstruction_help'] = 'This instruction is sent to the AI model along with the user\'s prompt. Editing this instruction is not recommended unless absolutely required.';
 $string['action:generate_image:endpoint'] = 'API endpoint';
 $string['action:generate_image:model'] = 'AI model';
 $string['action:generate_image:model_desc'] = 'The model used to generate images from user prompts.';
@@ -33,20 +38,31 @@ $string['action:generate_text:model'] = 'AI model';
 $string['action:generate_text:model_desc'] = 'The model used to generate the text response.';
 $string['action:generate_text:systeminstruction'] = 'System instruction';
 $string['action:generate_text:systeminstruction_desc'] = 'This instruction is sent to the AI model along with the user\'s prompt. Editing this instruction is not recommended unless absolutely required.';
+$string['action:generate_text:systeminstruction_help'] = 'This instruction is sent to the AI model along with the user\'s prompt. Editing this instruction is not recommended unless absolutely required.';
 $string['action:summarise_text:endpoint'] = 'API endpoint';
 $string['action:summarise_text:model'] = 'AI model';
 $string['action:summarise_text:model_desc'] = 'The model used to summarise the provided text.';
 $string['action:summarise_text:systeminstruction'] = 'System instruction';
 $string['action:summarise_text:systeminstruction_desc'] = 'This instruction is sent to the AI model along with the user\'s prompt. Editing this instruction is not recommended unless absolutely required.';
 $string['apikey'] = 'Gemini API key';
-$string['apikey_desc'] = 'Get a key from <a href="https://aistudio.google.com/apikey">Google AI Studio website API keys</a>.';
+$string['apikey_help'] = 'Get a key from <a href="https://aistudio.google.com/apikey">Google AI Studio website API keys</a>.';
+$string['custom_model_name'] = 'Custom model name';
 $string['enableglobalratelimit'] = 'Set site-wide rate limit';
 $string['enableglobalratelimit_desc'] = 'Limit the number of requests that the Gemini API provider can receive across the entire site every hour.';
 $string['enableuserratelimit'] = 'Set user rate limit';
 $string['enableuserratelimit_desc'] = 'Limit the number of requests each user can make to the Gemini API provider every hour.';
+$string['extraparams'] = 'Extra parameters';
+$string['extraparams_help'] = 'Extra parameters can be configured here. We support JSON format. For example:
+<pre>
+{
+    "temperature": 0.5,
+    "max_completion_tokens": 100
+}
+</pre>';
 $string['getallmodels_error'] = 'You need to insert API key before.';
 $string['globalratelimit'] = 'Maximum number of site-wide requests';
 $string['globalratelimit_desc'] = 'The number of site-wide requests allowed per hour.';
+$string['invalidjson'] = 'Invalid JSON string';
 $string['pluginname'] = 'Gemini API provider';
 $string['privacy:metadata'] = 'The Gemini API provider plugin does not store any personal data.';
 $string['privacy:metadata:aiprovider_gemini:externalpurpose'] = 'This information is sent to the Gemini API in order for a response to be generated. Your Gemini account settings may change how Gemini stores and retains this data. No user data is explicitly sent to Gemini or stored in Moodle LMS by this plugin.';
@@ -54,5 +70,15 @@ $string['privacy:metadata:aiprovider_gemini:model'] = 'The model used to generat
 $string['privacy:metadata:aiprovider_gemini:numberimages'] = 'When generating images the number of images used in the response.';
 $string['privacy:metadata:aiprovider_gemini:prompttext'] = 'The user entered text prompt used to generate the response.';
 $string['privacy:metadata:aiprovider_gemini:responseformat'] = 'When generating images the format of the response.';
+$string['settings'] = 'Settings';
+$string['settings_frequency_penalty'] = 'frequency_penalty';
+$string['settings_frequency_penalty_help'] = 'The frequency penalty adjusts how often words are repeated. The higher the penalty, the less repetitions in the generated text.';
+$string['settings_help'] = 'Adjust the settings below to customise how requests are sent to Gemini.';
+$string['settings_max_completion_tokens'] = 'max_completion_tokens';
+$string['settings_max_completion_tokens_help'] = 'The maximum number of tokens used in the generated text.';
+$string['settings_presence_penalty'] = 'presence_penalty';
+$string['settings_presence_penalty_help'] = 'The presence penalty encourages the model to use new words by increasing the likelihood of choosing words it hasn\'t used before. A higher value makes the generated text more diverse, while a lower value allows more repetition.';
+$string['settings_top_p'] = 'top_p';
+$string['settings_top_p_help'] = 'top_p (nucleus sampling) determines how many possible words to consider. A high value (e.g. 0.9) means the model looks at more words, which makes the generated text more diverse.';
 $string['userratelimit'] = 'Maximum number of requests per user';
 $string['userratelimit_desc'] = 'The number of requests allowed per hour, per user.';

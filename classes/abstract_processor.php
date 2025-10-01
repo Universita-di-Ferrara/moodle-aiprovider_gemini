@@ -24,6 +24,7 @@ use GuzzleHttp\RequestOptions;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\UriInterface;
+use GuzzleHttp\Psr7\Uri;
 
 /**
  * Class process text generation.
@@ -39,14 +40,18 @@ abstract class abstract_processor extends process_base {
      *
      * @return UriInterface
      */
-    abstract protected function get_endpoint(): UriInterface;
+    protected function get_endpoint(): UriInterface {
+        return new Uri($this->provider->actionconfig[$this->action::class]['settings']['endpoint']);
+    }
 
     /**
      * Get the name of the model to use.
      *
      * @return string
      */
-    abstract protected function get_model(): string;
+    protected function get_model(): string {
+        return $this->provider->actionconfig[$this->action::class]['settings']['model'];
+    }
 
     /**
      * Get the system instructions.
@@ -55,6 +60,32 @@ abstract class abstract_processor extends process_base {
      */
     protected function get_system_instruction(): string {
         return $this->action::get_system_instruction();
+    }
+
+    /**
+     * Get the model settings.
+     *
+     * @return array
+     */
+    protected function get_model_settings(): array {
+        $settings = $this->provider->actionconfig[$this->action::class]['settings'];
+        if (!empty($settings['modelextraparams'])) {
+            // Custom model settings.
+            $params = json_decode($settings['modelextraparams'], true);
+            foreach ($params as $key => $param) {
+                $settings[$key] = $param;
+            }
+        }
+
+        // Unset unnecessary settings.
+        unset(
+            $settings['model'],
+            $settings['endpoint'],
+            $settings['systeminstruction'],
+            $settings['providerid'],
+            $settings['modelextraparams'],
+        );
+        return $settings;
     }
 
     /**

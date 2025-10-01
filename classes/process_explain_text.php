@@ -16,17 +16,14 @@
 
 namespace aiprovider_gemini;
 
-use GuzzleHttp\Psr7\Uri;
-use Psr\Http\Message\UriInterface;
-
 /**
- * Class process text summarisation.
+ * Class process text explanation.
  *
  * @package    aiprovider_gemini
  * @copyright  2025 University of Ferrara, Italy
- * @author     Andrea Bertelli <andrea.bertelli@unife.it>
+ * @author     Andrea Bertelli <andrea.bertell@unife.it>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class process_summarise_text extends process_generate_text {
+class process_explain_text extends process_generate_text {
 
 }
