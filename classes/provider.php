@@ -256,14 +256,14 @@ class provider extends \core_ai\provider {
                         $models[] = $model->name;
                     }
                 }
-                if ($bodyobj->nextPageToken) {
+                if (isset($bodyobj->nextPageToken)) {
                     $request = new Request(
                         method: 'GET',
                         uri: $endpoint . '?pageToken=' . $bodyobj->nextPageToken,
                     );
                     $request = $this->add_authentication_headers($request);
                 }
-            } while ($bodyobj->nextPageToken);
+            } while (isset($bodyobj->nextPageToken));
 
             return $models;
         } catch (\Exception $e) {
