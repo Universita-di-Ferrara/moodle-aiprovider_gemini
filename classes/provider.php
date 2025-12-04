@@ -170,7 +170,7 @@ class provider extends \core_ai\provider {
                 "aiprovider_gemini/action_{$actionname}_endpoint",
                 new \lang_string("action:{$actionname}:endpoint", 'aiprovider_gemini'),
                 '',
-                'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',
+                'https://generativelanguage.googleapis.com/v1beta/models/@@selectedmodel@@:generateContent',
                 PARAM_URL,
             );
             // Add system instruction settings.
@@ -187,7 +187,7 @@ class provider extends \core_ai\provider {
                 "aiprovider_gemini/action_{$actionname}_model",
                 new \lang_string("action:{$actionname}:model", 'aiprovider_gemini'),
                 new \lang_string("action:{$actionname}:model_desc", 'aiprovider_gemini'),
-                'imagen-3.0-generate-002',
+                'imagegen-4.0-generate-001',
                 $this->get_all_models($actionname),
             );
             // Add API endpoint.
@@ -195,7 +195,7 @@ class provider extends \core_ai\provider {
                 "aiprovider_gemini/action_{$actionname}_endpoint",
                 new \lang_string("action:{$actionname}:endpoint", 'aiprovider_gemini'),
                 '',
-                'https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict',
+                'https://generativelanguage.googleapis.com/v1beta/models/@@selectedmodel@@:predict',
                 PARAM_URL,
             );
             // Imagen does not support system instructions.
@@ -253,7 +253,9 @@ class provider extends \core_ai\provider {
                 }
                 foreach ($bodyobj->models as $model) {
                     if (preg_match($pattern, $model->name)) {
-                        $models[] = $model->name;
+                        // Remove the model/ suffix - we just want the model name.
+                        $modelname = str_replace("models/", "", $model->name);
+                        $models[$modelname] = $modelname;
                     }
                 }
                 if (isset($bodyobj->nextPageToken)) {

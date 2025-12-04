@@ -28,14 +28,28 @@ use Psr\Http\Message\UriInterface;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class process_summarise_text extends process_generate_text {
+
+    /** @var $fallbackmodel Fallback model in case model selection has a problem **/
+    private string $fallbackmodel = "gemini-2.5-flash";
+
     #[\Override]
     protected function get_endpoint(): UriInterface {
-        return new Uri(get_config('aiprovider_gemini', 'action_summarise_text_endpoint'));
+        // The Gemini Endpoint contains the model, so to use the selected model we update it.
+        $endpointtemplate = get_config('aiprovider_gemini', 'action_summarise_text_endpoint');
+        $theendpoint = str_replace('@@selectedmodel@@', $this->get_model(), $endpointtemplate);
+        return new Uri($theendpoint);
     }
 
     #[\Override]
     protected function get_model(): string {
-        return get_config('aiprovider_gemini', 'action_summarise_text_model');
+        $themodel = get_config('aiprovider_gemini', 'action_summarise_text_model');
+        // Previously the value of model saved in the settings was a numeric array key.
+        // But we made the array key the model name so we could access it here.
+        // Anyone on the old settings however would be in trouble, so we use this fallback in that case.
+        if (!$themodel || is_numeric($themodel)) {
+            $themodel = $this->fallbackmodel;
+        }
+        return $themodel;
     }
 
     #[\Override]
