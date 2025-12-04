@@ -31,7 +31,7 @@ class imagen4_0_generate_001 extends base implements gemini_base {
 
     #[\Override]
     public function get_model_name(): string {
-        return 'imagen-4-generate-001';
+        return 'imagen-4.0-generate-001';
     }
 
     #[\Override]
