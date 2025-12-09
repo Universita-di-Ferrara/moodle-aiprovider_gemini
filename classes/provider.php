@@ -154,6 +154,10 @@ class provider extends \core_ai\provider {
         string $section,
         bool $hassiteconfig
     ): array {
+
+        global $PAGE;
+        $PAGE->requires->js_call_amd('aiprovider_gemini/selectEndpoint', 'init');
+
         $actionname = substr($action, (strrpos($action, '\\') + 1));
         $settings = [];
         if ($actionname === 'generate_text' || $actionname === 'summarise_text') {
@@ -187,7 +191,7 @@ class provider extends \core_ai\provider {
                 "aiprovider_gemini/action_{$actionname}_model",
                 new \lang_string("action:{$actionname}:model", 'aiprovider_gemini'),
                 new \lang_string("action:{$actionname}:model_desc", 'aiprovider_gemini'),
-                'imagen-3.0-generate-002',
+                'imagen-4.0-generate-001',
                 $this->get_all_models($actionname),
             );
             // Add API endpoint.
@@ -195,7 +199,7 @@ class provider extends \core_ai\provider {
                 "aiprovider_gemini/action_{$actionname}_endpoint",
                 new \lang_string("action:{$actionname}:endpoint", 'aiprovider_gemini'),
                 '',
-                'https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict',
+                'https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict',
                 PARAM_URL,
             );
             // Imagen does not support system instructions.
@@ -237,7 +241,6 @@ class provider extends \core_ai\provider {
                 }
                 $responsebody = $response->getBody();
                 $bodyobj = json_decode($responsebody->getContents());
-
                 /*
                 * Filter models based on the action name.
                 */
@@ -253,9 +256,12 @@ class provider extends \core_ai\provider {
                 }
                 foreach ($bodyobj->models as $model) {
                     if (preg_match($pattern, $model->name)) {
-                        $models[] = $model->name;
+                        $cleanid = str_replace('models/', '', $model->name);
+                        $displayname = isset($model->displayName) ? $model->displayName : $cleanid;
+                        $models[$cleanid] = $displayname;
                     }
                 }
+
                 if (isset($bodyobj->nextPageToken)) {
                     $request = new Request(
                         method: 'GET',
