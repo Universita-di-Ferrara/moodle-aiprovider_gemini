@@ -85,7 +85,7 @@ The plugin supports two types of rate limiting:
 - **System Instructions**: Customizable prompts for consistent AI behavior
 
 #### Image Generation Models
-- **Default**: `imagen-3.0-generate-002`
+- **Default**: `imagen-4.0-generate-001`
 - **Available**: All Imagen models
 - **Features**: High-quality image generation from text prompts
 
