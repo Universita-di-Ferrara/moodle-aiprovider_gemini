@@ -30,7 +30,6 @@ use core\http_client;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class provider extends \core_ai\provider {
-
     /**
      * Get the list of actions that this provider supports.
      *
@@ -80,7 +79,7 @@ class provider extends \core_ai\provider {
         $customdata = [
             'actionname' => $actionname,
             'action' => $action,
-            'providername' => 'aiprovider_openai',
+            'providername' => 'aiprovider_gemini',
         ];
         if ($actionname === 'generate_text' || $actionname === 'summarise_text' || $actionname === 'explain_text') {
             $mform = new form\action_generate_text_form(customdata: $customdata);
