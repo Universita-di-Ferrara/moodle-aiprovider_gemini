@@ -31,7 +31,6 @@ use Psr\Http\Message\UriInterface;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class process_generate_text extends abstract_processor {
-
     #[\Override]
     protected function create_request_object(string $userid): RequestInterface {
         /*

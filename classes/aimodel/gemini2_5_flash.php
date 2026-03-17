@@ -28,7 +28,6 @@ use MoodleQuickForm;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class gemini2_5_flash extends base implements gemini_base {
-
     #[\Override]
     public function get_model_name(): string {
         return 'gemini-2.5-flash';

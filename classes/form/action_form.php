@@ -167,9 +167,11 @@ class action_form extends action_settings_form {
         );
         $mform->setType('modeltemplate', PARAM_TEXT);
         $mform->addRule('modeltemplate', null, 'required', null, 'client');
-        if (!empty($this->actionconfig['model']) &&
+        if (
+            !empty($this->actionconfig['model']) &&
                 (!array_key_exists($this->actionconfig['model'], $this->get_model_list($modeltype)) ||
-                !empty($this->actionconfig['modelextraparams']))) {
+                !empty($this->actionconfig['modelextraparams']))
+        ) {
             $defaultmodel = 'custom';
         } else if (empty($this->actionconfig['model'])) {
             $defaultmodel = ($actionname === 'generate_image') ? 'imagen-4.0-' : 'gemini-2.5-flash';

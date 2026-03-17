@@ -20,39 +20,58 @@ use core_ai\aimodel\base;
 use MoodleQuickForm;
 
 /**
- * Imagen 4.0 Fast AI model for image generation.
+ * Gemini 3.1 Flash-Lite AI model.
  *
  * @package    aiprovider_gemini
  * @copyright  University of Ferrara, Italy
  * @author     Andrea Bertelli <andrea.bertell@unife.it>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class imagen4_0_fast_generate_001 extends base implements gemini_base {
+class gemini3_1_flash_lite extends base implements gemini_base {
     #[\Override]
     public function get_model_name(): string {
-        return 'imagen-4.0-fast-generate-001';
+        return 'gemini-3.1-flash-lite-preview';
     }
 
     #[\Override]
     public function get_model_display_name(): string {
-        return 'Imagen 4.0 Fast';
+        return 'Gemini 3.1 Flash-Lite';
     }
 
     #[\Override]
     public function has_model_settings(): bool {
-        return false;
+        return true;
     }
 
     /**
-     * Get the endpoint for Imagen 4.0 Fast.
+     * Get the endpoint for Gemini 3.1 Flash-Lite.
      * @return string The endpoint URL.
      */
     public function get_endpoint(): string {
-        return 'https://generativelanguage.googleapis.com/v1beta/models/' . $this->get_model_name() . ':predict';
+        return 'https://generativelanguage.googleapis.com/v1beta/models/' . $this->get_model_name() . ':generateContent';
+    }
+
+    #[\Override]
+    public function add_model_settings(MoodleQuickForm $mform): void {
+        $mform->addElement(
+            'text',
+            'topP',
+            get_string('settings_top_p', 'aiprovider_gemini'),
+        );
+        $mform->setType('topP', PARAM_FLOAT);
+        $mform->addHelpButton('topP', 'settings_top_p', 'aiprovider_gemini');
+
+        $mform->addElement(
+            'text',
+            'maxOutputTokens',
+            get_string('settings_max_completion_tokens', 'aiprovider_gemini'),
+        );
+        $mform->setType('maxOutputTokens', PARAM_INT);
+        $mform->addHelpButton('maxOutputTokens', 'settings_max_completion_tokens', 'aiprovider_gemini');
     }
 
     #[\Override]
     public function model_type(): array {
-        return [self::MODEL_TYPE_IMAGE];
+        return [self::MODEL_TYPE_TEXT];
     }
 }

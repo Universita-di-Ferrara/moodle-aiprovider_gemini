@@ -28,7 +28,6 @@ use MoodleQuickForm;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class imagen4_0_ultra_generate_001 extends base implements gemini_base {
-
     #[\Override]
     public function get_model_name(): string {
         return 'imagen-4.0-ultra-generate-001';

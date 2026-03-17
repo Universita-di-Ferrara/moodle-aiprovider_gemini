@@ -25,7 +25,6 @@ namespace aiprovider_gemini\aimodel;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 interface gemini_base {
-
     /** @var int MODEL_TYPE_TEXT Text model type. */
     public const MODEL_TYPE_TEXT = 1;
     /** @var int MODEL_TYPE_IMAGE Image model type. */

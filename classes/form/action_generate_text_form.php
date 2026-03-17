@@ -76,5 +76,4 @@ class action_generate_text_form extends action_form {
 
         $this->set_data($this->actionconfig);
     }
-
 }
