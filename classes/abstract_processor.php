@@ -26,7 +26,11 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\UriInterface;
 
 /**
- * Class process text generation.
+ * Abstract processor with primary → fallback key support.
+ *
+ * On auth errors (401/403), automatically retries with the fallback key
+ * if one is configured. Rate limit errors (429) are NOT retried with a
+ * different key — rate limits are per-project, not per-key.
  *
  * @package    aiprovider_gemini
  * @copyright  2025 University of Ferrara, Italy
@@ -58,14 +62,10 @@ abstract class abstract_processor extends process_base {
     }
 
     /**
-     * Create the request object to send to the OpenAI API.
-     *
-     * This object contains all the required parameters for the request.
-     *
-     *
+     * Create the request object to send to the Gemini API.
      *
      * @param string $userid The user id.
-     * @return RequestInterface The request object to send to the OpenAI API.
+     * @return RequestInterface The request object to send to the API.
      */
     abstract protected function create_request_object(
         string $userid,
@@ -80,89 +80,73 @@ abstract class abstract_processor extends process_base {
     abstract protected function handle_api_success(ResponseInterface $response): array;
 
     /**
-     * Check if an HTTP status code is retryable by failing over to the next API key.
+     * Check if an HTTP status code is an authentication error that warrants fallback.
      *
-     * Retryable: 429 (rate limit), 401/403 (auth error — key may be invalid/revoked).
-     * Not retryable: 400 (bad request), 200 (success), 5xx (server error — key won't help).
+     * Only 401 (unauthorized) and 403 (forbidden) trigger fallback — these indicate
+     * the key itself is invalid or revoked. Rate limits (429) are per-project and
+     * switching keys won't help.
      *
      * @param int $statuscode The HTTP status code.
-     * @return bool True if the error is retryable with a different key.
+     * @return bool True if the error is an auth error.
      */
-    private function is_retryable_status(int $statuscode): bool {
-        return in_array($statuscode, [429, 401, 403]);
+    private function is_auth_error(int $statuscode): bool {
+        return in_array($statuscode, [401, 403]);
     }
 
     #[\ReturnTypeWillChange]
     protected function query_ai_api(): array {
-        $numkeys = count($this->provider->get_apikeys());
-        $maxattempts = max(1, $numkeys); // Try at most once per available key.
+        // Always start with the primary key.
+        $this->provider->reset_to_primary();
 
-        for ($attempt = 0; $attempt < $maxattempts; $attempt++) {
-            $result = $this->make_single_request();
+        // First attempt with primary key.
+        $result = $this->make_single_request();
 
-            if ($result['success']) {
-                return $result;
-            }
-
-            $errorcode = $result['errorcode'] ?? 0;
-
-            // If the error is retryable and we have more keys to try, failover.
-            if ($this->is_retryable_status($errorcode) && $attempt < $maxattempts - 1) {
-                $advanced = $this->provider->advance_to_next_key();
-                if (!$advanced) {
-                    // Only one key configured, no point retrying.
-                    return $result;
-                }
-                // Log the failover for debugging.
-                debugging(
-                    "aiprovider_gemini: Failover from key index " .
-                    ($this->provider->get_active_key_index() - 1 < 0 ? $numkeys - 1 : $this->provider->get_active_key_index() - 1) .
-                    " due to error {$errorcode}: " . ($result['errormessage'] ?? 'unknown') .
-                    ". Switched to key index " . $this->provider->get_active_key_index(),
-                    DEBUG_DEVELOPER
-                );
-                continue;
-            }
-
-            // Non-retryable error or exhausted all keys.
+        if ($result['success']) {
             return $result;
         }
 
-        // Should not reach here, but safety net.
-        return [
-            'success' => false,
-            'errorcode' => 0,
-            'errormessage' => 'All API keys exhausted',
-        ];
+        $errorcode = $result['errorcode'] ?? 0;
+
+        // If auth error and a fallback key is available, try once more.
+        if ($this->is_auth_error($errorcode) && $this->provider->switch_to_fallback()) {
+            debugging(
+                "aiprovider_gemini: Primary key returned auth error {$errorcode}: " .
+                ($result['errormessage'] ?? 'unknown') .
+                ". Retrying with fallback key.",
+                DEBUG_DEVELOPER
+            );
+
+            $result = $this->make_single_request();
+        }
+
+        return $result;
     }
 
     /**
-     * Make a single API request with the current active key.
+     * Make a single API request with the current key.
      *
      * @return array The response array.
      */
     private function make_single_request(): array {
-        // Create the request object.
         $request = $this->create_request_object(
             userid: $this->provider->generate_userid($this->action->get_configuration('userid')),
         );
         $request = $this->provider->add_authentication_headers($request);
         $client = \core\di::get(http_client::class);
+
         try {
-            // Call the external AI service.
             $response = $client->send($request, [
                 'base_uri' => $this->get_endpoint(),
                 RequestOptions::HTTP_ERRORS => false,
             ]);
         } catch (RequestException $e) {
-            // Handle any exceptions.
             return [
                 'success' => false,
                 'errorcode' => $e->getCode(),
                 'errormessage' => $e->getMessage(),
             ];
         }
-        // Double-check the response codes, in case of a non 200 that didn't throw an error.
+
         $status = $response->getStatusCode();
         if ($status === 200) {
             return $this->handle_api_success($response);

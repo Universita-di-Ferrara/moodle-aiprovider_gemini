@@ -1,5 +1,5 @@
 <?php
-// This file is part of Moodle - https://moodle.org/
+// This file is part of Moodle - http://moodle.org/
 //
 // Moodle is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -12,23 +12,13 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
-
-/**
- * Plugin administration pages are defined here.
- *
- * @package     aiprovider_gemini
- * @copyright   2025 University of Ferrara, Italy
- * @author      Andrea Bertelli <andrea.bertelli@unife.it>
- * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- */
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 use core_ai\admin\admin_settingspage_provider;
 
 defined('MOODLE_INTERNAL') || die();
 
 if ($hassiteconfig) {
-    // Provider specific settings heading.
     $settings = new admin_settingspage_provider(
         'aiprovider_gemini',
         new lang_string('pluginname', 'aiprovider_gemini'),
@@ -42,20 +32,7 @@ if ($hassiteconfig) {
         '',
     ));
 
-    // Setting to store gemini API keys (multi-key support).
-    // One key per line. Failover: uses first key, switches to next on 429/auth errors.
-    $settings->add(new admin_setting_configtextarea(
-        'aiprovider_gemini/apikeys',
-        new lang_string('apikeys', 'aiprovider_gemini'),
-        new lang_string('apikeys_desc', 'aiprovider_gemini'),
-        '',
-        PARAM_RAW_TRIMMED,
-        60,
-        5,
-    ));
-
-    // Legacy single key field kept for backward compatibility (hidden if multi-key is set).
-    // The provider will prefer multi-key field if populated.
+    // Primary API key.
     $settings->add(new admin_setting_configpasswordunmask(
         'aiprovider_gemini/apikey',
         new lang_string('apikey', 'aiprovider_gemini'),
@@ -63,7 +40,15 @@ if ($hassiteconfig) {
         '',
     ));
 
-    // Setting to enable/disable global rate limiting.
+    // Fallback API key — used only when the primary key returns an auth error (401/403).
+    $settings->add(new admin_setting_configpasswordunmask(
+        'aiprovider_gemini/apikey_fallback',
+        new lang_string('apikey_fallback', 'aiprovider_gemini'),
+        new lang_string('apikey_fallback_desc', 'aiprovider_gemini'),
+        '',
+    ));
+
+    // Global rate limiting.
     $settings->add(new admin_setting_configcheckbox(
         'aiprovider_gemini/enableglobalratelimit',
         new lang_string('enableglobalratelimit', 'aiprovider_gemini'),
@@ -71,8 +56,6 @@ if ($hassiteconfig) {
         0,
     ));
 
-    // Setting to set how many requests per hour are allowed for the global rate limit.
-    // Should only be enabled when global rate limiting is enabled.
     $settings->add(new admin_setting_configtext(
         'aiprovider_gemini/globalratelimit',
         new lang_string('globalratelimit', 'aiprovider_gemini'),
@@ -82,7 +65,7 @@ if ($hassiteconfig) {
     ));
     $settings->hide_if('aiprovider_gemini/globalratelimit', 'aiprovider_gemini/enableglobalratelimit', 'eq', 0);
 
-    // Setting to enable/disable user rate limiting.
+    // User rate limiting.
     $settings->add(new admin_setting_configcheckbox(
         'aiprovider_gemini/enableuserratelimit',
         new lang_string('enableuserratelimit', 'aiprovider_gemini'),
@@ -90,8 +73,6 @@ if ($hassiteconfig) {
         0,
     ));
 
-    // Setting to set how many requests per hour are allowed for the user rate limit.
-    // Should only be enabled when user rate limiting is enabled.
     $settings->add(new admin_setting_configtext(
         'aiprovider_gemini/userratelimit',
         new lang_string('userratelimit', 'aiprovider_gemini'),
