@@ -34,8 +34,11 @@ use core\http_client;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class provider extends \core_ai\provider {
-    /** @var string The Google AI Studio - Gemini API key. */
-    private string $apikey;
+    /** @var array List of API keys for failover. */
+    private array $apikeys = [];
+
+    /** @var int Index of the currently active API key. */
+    private int $activekeyindex = 0;
 
     /** @var bool Is global rate limiting for the API enabled. */
     private bool $enableglobalratelimit;
@@ -53,8 +56,35 @@ class provider extends \core_ai\provider {
      * Class constructor.
      */
     public function __construct() {
-        // Get api key from config.
-        $this->apikey = get_config('aiprovider_gemini', 'apikey');
+        // Get API keys from the new multi-key field.
+        $apikeysraw = get_config('aiprovider_gemini', 'apikeys');
+        if (!empty($apikeysraw)) {
+            // Parse multi-key textarea: one key per line, strip whitespace, filter empties.
+            $keys = array_filter(
+                array_map('trim', explode("\n", $apikeysraw)),
+                fn($key) => !empty($key)
+            );
+            $this->apikeys = array_values($keys);
+        }
+
+        // Fallback to legacy single key if multi-key is empty.
+        if (empty($this->apikeys)) {
+            $legacykey = get_config('aiprovider_gemini', 'apikey');
+            if (!empty($legacykey)) {
+                $this->apikeys = [$legacykey];
+            }
+        }
+
+        // Load the active key index from config (persisted failover state).
+        $savedindex = get_config('aiprovider_gemini', 'activekeyindex');
+        if ($savedindex !== false && is_numeric($savedindex)) {
+            $this->activekeyindex = (int) $savedindex;
+            // Clamp to valid range in case keys were removed.
+            if ($this->activekeyindex >= count($this->apikeys)) {
+                $this->activekeyindex = 0;
+            }
+        }
+
         // Get global rate limit from config.
         $this->enableglobalratelimit = get_config('aiprovider_gemini', 'enableglobalratelimit');
         $this->globalratelimit = get_config('aiprovider_gemini', 'globalratelimit');
@@ -92,6 +122,57 @@ class provider extends \core_ai\provider {
     }
 
     /**
+     * Get the currently active API key.
+     *
+     * @return string The active API key, or empty string if none configured.
+     */
+    public function get_apikey(): string {
+        if (empty($this->apikeys)) {
+            return '';
+        }
+        return $this->apikeys[$this->activekeyindex];
+    }
+
+    /**
+     * Get all configured API keys.
+     *
+     * @return array List of API keys.
+     */
+    public function get_apikeys(): array {
+        return $this->apikeys;
+    }
+
+    /**
+     * Get the index of the currently active key.
+     *
+     * @return int The active key index.
+     */
+    public function get_active_key_index(): int {
+        return $this->activekeyindex;
+    }
+
+    /**
+     * Advance to the next API key in the failover chain.
+     *
+     * Persists the new index so subsequent requests use the new active key.
+     *
+     * @return bool True if advanced to a different key, false if only one key or already at end.
+     */
+    public function advance_to_next_key(): bool {
+        if (count($this->apikeys) <= 1) {
+            return false;
+        }
+
+        $oldindex = $this->activekeyindex;
+        $this->activekeyindex = ($this->activekeyindex + 1) % count($this->apikeys);
+
+        // Persist the new active key index.
+        set_config('aiprovider_gemini', 'activekeyindex', $this->activekeyindex);
+
+        return $this->activekeyindex !== $oldindex;
+    }
+
+    /**
      * Update a request to add any headers required by the provider.
      *
      * @param \Psr\Http\Message\RequestInterface $request
@@ -99,7 +180,7 @@ class provider extends \core_ai\provider {
      */
     public function add_authentication_headers(RequestInterface $request): RequestInterface {
         return $request
-            ->withAddedHeader('x-goog-api-key', $this->apikey);
+            ->withAddedHeader('x-goog-api-key', $this->get_apikey());
     }
 
     #[\Override]
@@ -214,7 +295,7 @@ class provider extends \core_ai\provider {
      * @return bool Return true if configured.
      */
     public function is_provider_configured(): bool {
-        return !empty($this->apikey);
+        return !empty($this->apikeys);
     }
 
     /**

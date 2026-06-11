@@ -42,7 +42,20 @@ if ($hassiteconfig) {
         '',
     ));
 
-    // Setting to store gemini API key.
+    // Setting to store gemini API keys (multi-key support).
+    // One key per line. Failover: uses first key, switches to next on 429/auth errors.
+    $settings->add(new admin_setting_configtextarea(
+        'aiprovider_gemini/apikeys',
+        new lang_string('apikeys', 'aiprovider_gemini'),
+        new lang_string('apikeys_desc', 'aiprovider_gemini'),
+        '',
+        PARAM_RAW_TRIMMED,
+        60,
+        5,
+    ));
+
+    // Legacy single key field kept for backward compatibility (hidden if multi-key is set).
+    // The provider will prefer multi-key field if populated.
     $settings->add(new admin_setting_configpasswordunmask(
         'aiprovider_gemini/apikey',
         new lang_string('apikey', 'aiprovider_gemini'),

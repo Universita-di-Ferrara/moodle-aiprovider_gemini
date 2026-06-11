@@ -79,9 +79,69 @@ abstract class abstract_processor extends process_base {
      */
     abstract protected function handle_api_success(ResponseInterface $response): array;
 
+    /**
+     * Check if an HTTP status code is retryable by failing over to the next API key.
+     *
+     * Retryable: 429 (rate limit), 401/403 (auth error — key may be invalid/revoked).
+     * Not retryable: 400 (bad request), 200 (success), 5xx (server error — key won't help).
+     *
+     * @param int $statuscode The HTTP status code.
+     * @return bool True if the error is retryable with a different key.
+     */
+    private function is_retryable_status(int $statuscode): bool {
+        return in_array($statuscode, [429, 401, 403]);
+    }
+
     #[\Override]
     protected function query_ai_api(): array {
+        $numkeys = count($this->provider->get_apikeys());
+        $maxattempts = max(1, $numkeys); // Try at most once per available key.
 
+        for ($attempt = 0; $attempt < $maxattempts; $attempt++) {
+            $result = $this->make_single_request();
+
+            if ($result['success']) {
+                return $result;
+            }
+
+            $errorcode = $result['errorcode'] ?? 0;
+
+            // If the error is retryable and we have more keys to try, failover.
+            if ($this->is_retryable_status($errorcode) && $attempt < $maxattempts - 1) {
+                $advanced = $this->provider->advance_to_next_key();
+                if (!$advanced) {
+                    // Only one key configured, no point retrying.
+                    return $result;
+                }
+                // Log the failover for debugging.
+                debugging(
+                    "aiprovider_gemini: Failover from key index " .
+                    ($this->provider->get_active_key_index() - 1 < 0 ? $numkeys - 1 : $this->provider->get_active_key_index() - 1) .
+                    " due to error {$errorcode}: " . ($result['errormessage'] ?? 'unknown') .
+                    ". Switched to key index " . $this->provider->get_active_key_index(),
+                    DEBUG_DEVELOPER
+                );
+                continue;
+            }
+
+            // Non-retryable error or exhausted all keys.
+            return $result;
+        }
+
+        // Should not reach here, but safety net.
+        return [
+            'success' => false,
+            'errorcode' => 0,
+            'errormessage' => 'All API keys exhausted',
+        ];
+    }
+
+    /**
+     * Make a single API request with the current active key.
+     *
+     * @return array The response array.
+     */
+    private function make_single_request(): array {
         // Create the request object.
         $request = $this->create_request_object(
             userid: $this->provider->generate_userid($this->action->get_configuration('userid')),
