@@ -79,7 +79,7 @@ abstract class abstract_processor extends process_base {
      */
     abstract protected function handle_api_success(ResponseInterface $response): array;
 
-    #[\Override]
+    #[\ReturnTypeWillChange]
     protected function query_ai_api(): array {
 
         // Create the request object.
