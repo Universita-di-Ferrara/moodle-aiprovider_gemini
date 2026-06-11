@@ -183,7 +183,7 @@ class provider extends \core_ai\provider {
             ->withAddedHeader('x-goog-api-key', $this->get_apikey());
     }
 
-    #[\Override]
+    #[\ReturnTypeWillChange]
     public function is_request_allowed(aiactions\base $action): array|bool {
         $ratelimiter = \core\di::get(rate_limiter::class);
         $component = \core\component::get_component_from_classname(get_class($this));

@@ -92,7 +92,7 @@ abstract class abstract_processor extends process_base {
         return in_array($statuscode, [429, 401, 403]);
     }
 
-    #[\Override]
+    #[\ReturnTypeWillChange]
     protected function query_ai_api(): array {
         $numkeys = count($this->provider->get_apikeys());
         $maxattempts = max(1, $numkeys); // Try at most once per available key.
