@@ -31,22 +31,21 @@ use Psr\Http\Message\UriInterface;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class process_generate_text extends abstract_processor {
-    #[\Override]
     protected function get_endpoint(): UriInterface {
         return new Uri(get_config('aiprovider_gemini', 'action_generate_text_endpoint'));
     }
 
-    #[\Override]
+
     protected function get_model(): string {
         return get_config('aiprovider_gemini', 'action_generate_text_model');
     }
 
-    #[\Override]
+
     protected function get_system_instruction(): string {
         return get_config('aiprovider_gemini', 'action_generate_text_systeminstruction');
     }
 
-    #[\Override]
+
     protected function create_request_object(string $userid): RequestInterface {
         $prompttext = $this->action->get_configuration('prompttext');
         $systeminstruction = $this->get_system_instruction();

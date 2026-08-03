@@ -32,17 +32,16 @@ use Psr\Http\Message\UriInterface;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class process_generate_image extends abstract_processor {
-    #[\Override]
     protected function get_endpoint(): UriInterface {
         return new Uri(get_config('aiprovider_gemini', 'action_generate_image_endpoint'));
     }
 
-    #[\Override]
+
     protected function get_model(): string {
         return get_config('aiprovider_gemini', 'action_generate_image_model');
     }
 
-    #[\Override]
+
     protected function query_ai_api(): array {
         $validationerror = $this->validate_image_configuration();
         if ($validationerror !== null) {
@@ -76,7 +75,7 @@ class process_generate_image extends abstract_processor {
         };
     }
 
-    #[\Override]
+
     protected function create_request_object(string $userid): RequestInterface {
         $requestobj = (object) [
             'model' => $this->get_model(),
@@ -108,7 +107,7 @@ class process_generate_image extends abstract_processor {
         );
     }
 
-    #[\Override]
+
     protected function handle_api_success(ResponseInterface $response): array {
         $bodyobj = json_decode((string) $response->getBody());
 
