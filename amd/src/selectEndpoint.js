@@ -35,19 +35,16 @@ define(['jquery'], function($) {
                     type: 'text',
                     select: 'action_generate_text_model',
                     input: 'action_generate_text_endpoint',
-                    suffix: ':generateContent'
                 },
                 {
                     type: 'text',
                     select: 'action_summarise_text_model',
                     input: 'action_summarise_text_endpoint',
-                    suffix: ':generateContent'
                 },
                 {
                     type: 'image',
                     select: 'action_generate_image_model',
                     input: 'action_generate_image_endpoint',
-                    suffix: ':predict'
                 }
             ];
 
@@ -66,10 +63,11 @@ define(['jquery'], function($) {
                     // Funzione per aggiornare l'URL
                     const updateEndpoint = function() {
                         const model = $select.val();
-                        // Base URL standard per Gemini
-                        const baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models/';
-                        // Costruisci il nuovo URL
-                        const newUrl = baseUrl + model + map.suffix;
+                        const baseUrl = 'https://generativelanguage.googleapis.com/v1beta/';
+                        const isGemini3 = /^gemini-3(?:\.\d+)*-/i.test(model);
+                        const newUrl = map.type === 'image' || isGemini3
+                            ? baseUrl + 'interactions'
+                            : baseUrl + 'models/' + model + ':generateContent';
 
                         // Aggiorna il campo input e fa un leggero effetto visivo
                         $input.val(newUrl).css('background-color', '#e8f0fe').animate({backgroundColor: '#ffffff'}, 500);
@@ -82,5 +80,3 @@ define(['jquery'], function($) {
         }
     };
 });
-
-

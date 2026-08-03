@@ -4,9 +4,10 @@
 
 The Gemini API Provider plugin integrates Google's Gemini AI models into Moodle's AI framework, enabling powerful AI capabilities across your learning management system. This plugin supports text generation, image generation, and text summarization using Google's state-of-the-art AI models.
 
-## New version 2.0.0 Highlights
+## New version 2.1.0 Highlights
 
-- **Change selection of endpoint URLs based on selected models**: The plugin now dynamically updates the API endpoint URLs according to the chosen Gemini or Imagen models, ensuring optimal performance and compatibility.
+- **Gemini 3 support**: Text generation and summarisation support stable Gemini 3 models, including `gemini-3.5-flash-lite`, through the Interactions API.
+- **Native Gemini image generation**: Image generation uses Gemini native image models instead of the deprecated Imagen 4 API.
 
 
 ## Features
@@ -14,12 +15,12 @@ The Gemini API Provider plugin integrates Google's Gemini AI models into Moodle'
 ### Supported AI Actions
 
 - **Text Generation**: Generate creative and informative text responses using Gemini models
-- **Image Generation**: Create images from text prompts using Google's Imagen models
+- **Image Generation**: Create images from text prompts using Google's Gemini native image models
 - **Text Summarization**: Automatically summarize long text content for better comprehension
 
 ### Key Features
 
-- **Multiple Model Support**: Choose from various Gemini models (Pro, Flash, Flash-Lite) and Imagen models
+- **Multiple Model Support**: Choose from stable Gemini text models and Gemini 3 native image models
 - **Rate Limiting**: Configurable global and per-user rate limiting to manage API usage
 - **Privacy-First**: No personal data is stored locally; user identification is anonymized
 - **Flexible Configuration**: Customizable system instructions and API endpoints
@@ -41,7 +42,7 @@ The Gemini API Provider plugin integrates Google's Gemini AI models into Moodle'
 
 2. **Install the Plugin**
    - Extract the plugin to your Moodle installation's `/ai/provider/` directory
-   - The final path should be: `/ai/provider/aiprovider_gemini/`
+   - The final path should be: `/ai/provider/gemini/`
 
 3. **Install via Moodle Admin**
    - Log in to your Moodle site as an administrator
@@ -84,18 +85,29 @@ The plugin supports two types of rate limiting:
 ### Model Configuration
 
 #### Text Generation Models
-- **Default**: `gemini-2.5-flash`
-- **Available**: All Gemini models (Pro, Flash, Flash-Lite variants)
+- **Default**: `gemini-3.5-flash-lite`
+- **Available**: Stable Gemini models supporting text generation
 - **System Instructions**: Customizable prompts for consistent AI behavior
 
 #### Image Generation Models
-- **Default**: `imagen-4.0-generate-001`
-- **Available**: All Imagen models
-- **Features**: High-quality image generation from text prompts
+- **Default**: `gemini-3.1-flash-image`
+- **Available**: Gemini 3.1 Flash Image, Gemini 3.1 Flash Lite Image and Gemini 3 Pro Image
+- **Features**: Native image generation through the Gemini Interactions API
+- **Quality**: Standard uses 1K output; HD uses 2K output. The Lite model supports Standard/1K only.
 
 #### Text Summarization Models
-- **Default**: `gemini-2.5-flash`
+- **Default**: `gemini-3.5-flash-lite`
 - **Features**: Intelligent text summarization with configurable instructions
+
+### Existing installations
+
+Existing model and endpoint settings are not changed automatically. After upgrading,
+administrators should select the desired Gemini 3 model and save the corresponding
+Interactions endpoint. Legacy GenerateContent configurations remain available.
+
+Gemini 3 requests do not send the deprecated sampling parameters
+`temperature`, `top_p`, `top_k` or `candidate_count`.
+Use system instructions to express deterministic output requirements.
 
 ## Usage
 
@@ -166,5 +178,6 @@ This plugin is licensed under the [GNU General Public License v3.0](https://www.
 
 ## See Also
 
-- [Google AI Studio Documentation](https://ai.google.dev/docs)
+- [Gemini model documentation](https://ai.google.dev/gemini-api/docs/models)
+- [Gemini image generation documentation](https://ai.google.dev/gemini-api/docs/image-generation)
 - [Moodle Plugin Development Guide](https://docs.moodle.org/dev/Plugin_types) 

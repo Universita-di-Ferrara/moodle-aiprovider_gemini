@@ -1,0 +1,20 @@
+{
+    "responseId": "generate-content-test-id",
+    "candidates": [
+        {
+            "content": {
+                "parts": [
+                    {
+                        "text": "Generated legacy response."
+                    }
+                ]
+            },
+            "finishReason": "STOP"
+        }
+    ],
+    "usageMetadata": {
+        "promptTokenCount": 5,
+        "candidatesTokenCount": 12,
+        "totalTokenCount": 17
+    }
+}

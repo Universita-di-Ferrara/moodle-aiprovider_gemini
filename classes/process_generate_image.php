@@ -16,7 +16,6 @@
 
 namespace aiprovider_gemini;
 
-use core\http_client;
 use core_ai\ai_image;
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\Uri;
@@ -33,9 +32,6 @@ use Psr\Http\Message\UriInterface;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class process_generate_image extends abstract_processor {
-    /** @var int The number of images to generate. */
-    private int $numberimages = 1;
-
     #[\Override]
     protected function get_endpoint(): UriInterface {
         return new Uri(get_config('aiprovider_gemini', 'action_generate_image_endpoint'));
@@ -46,111 +42,66 @@ class process_generate_image extends abstract_processor {
         return get_config('aiprovider_gemini', 'action_generate_image_model');
     }
 
-
     #[\Override]
     protected function query_ai_api(): array {
-        $response = parent::query_ai_api();
+        $validationerror = $this->validate_image_configuration();
+        if ($validationerror !== null) {
+            return $validationerror;
+        }
 
-        // If the request was successful, save the URL to a file.
+        $response = parent::query_ai_api();
         if ($response['success']) {
-            $fileobj = $this->base64_to_file(
+            $response['draftfile'] = $this->base64_to_file(
                 $this->action->get_configuration('userid'),
-                $response['imagebase64']
+                $response['imagebase64'],
+                $response['mimetype'] ?? 'image/jpeg',
             );
-            // Add the file to the response, so the calling placement can do whatever they want with it.
-            $response['draftfile'] = $fileobj;
         }
 
         return $response;
     }
 
     /**
-     * Convert the given aspect ratio to an image size
+     * Convert a Moodle aspect ratio to the Gemini image format.
      *
-     * @param string $ratio The aspect ratio of the image.
-     * @return string The size of the image.
-     * aspectRatio: Changes the aspect ratio of the generated image. Supported values are:
-     * "1:1", "3:4", "4:3", "9:16", and "16:9".
-     * The default is "1:1".
+     * @param string $ratio The Moodle aspect ratio.
+     * @return string The Gemini aspect ratio.
      */
     private function calculate_size(string $ratio): string {
-        if ($ratio === 'square') {
-            $size = '1:1';
-        } else if ($ratio === 'landscape') {
-            $size = '16:9';
-        } else if ($ratio === 'portrait') {
-            $size = '9:16';
-        } else {
-            throw new \coding_exception('Invalid aspect ratio: ' . $ratio);
-        }
-        return $size;
+        return match ($ratio) {
+            'square' => '1:1',
+            'landscape' => '16:9',
+            'portrait' => '9:16',
+            default => throw new \coding_exception('Invalid aspect ratio: ' . $ratio),
+        };
     }
 
     #[\Override]
     protected function create_request_object(string $userid): RequestInterface {
-        /* ATTENTION: PROMPT TEXT MUST BE IN ENGLISH:
-        * en: english (default value)
-        * zh o zh-CN: chinese (simplified)
-        * zh-TW: chinese (traditional)
-        * hi: Hindi
-        * ja: japanese
-        * ko: korean
-        * pt: portuguese
-        * es: espanish
-        * https://cloud.google.com/vertex-ai/generative-ai/docs/model-reference/imagen-api?hl=it#-drest
-        * Google Gemini REST API requires a specific request format.
-        * Example request body:
-        *
-        * {
-        *     "instances": [
-        *     {
-        *       "prompt": "Draw a cat on the table."
-        *     }
-        *       ],
-        *     "parameters":
-        *         {
-        *             "sampleCount": 1,
-        *             "aspectRatio": "1:1",
-        *         }
-        *
-        * }
-
-        * Example response:
-        * {
-        *   "predictions": [
-        *         {
-        *           "bytesBase64Encoded": "BASE64_IMG_BYTES",
-        *           "mimeType": "image/png"
-        *         },
-        *         {
-        *           "mimeType": "image/png",
-        *           "bytesBase64Encoded": "BASE64_IMG_BYTES"
-        *         }
-        *     ]
-        * }
-
-
-        */
-
-        // Create the request object.
-        $requestobj = new \stdClass();
-
-        $requestobj->instances = [
-            (object) [
-                'prompt' => $this->action->get_configuration('prompttext'),
+        $requestobj = (object) [
+            'model' => $this->get_model(),
+            'input' => [
+                (object) [
+                    'type' => 'text',
+                    'text' => $this->action->get_configuration('prompttext'),
+                ],
+            ],
+            'response_format' => (object) [
+                'type' => 'image',
+                'mime_type' => 'image/jpeg',
+                'aspect_ratio' => $this->calculate_size(
+                    $this->action->get_configuration('aspectratio')
+                ),
+                'image_size' => $this->calculate_image_quality(
+                    $this->action->get_configuration('quality')
+                ),
             ],
         ];
 
-        $requestobj->parameters = (object) [
-            'sampleCount' => $this->numberimages,
-            'aspectRatio' => $this->calculate_size($this->action->get_configuration('aspectratio')),
-            'imageSize' => $this->calculate_image_quality($this->action->get_configuration('quality')),
-            'languageCode' => 'en', // Force English for best results.
-        ];
         return new Request(
             method: 'POST',
             uri: '',
-            body: json_encode((object) $requestobj),
+            body: json_encode($requestobj),
             headers: [
                 'Content-Type' => 'application/json',
             ],
@@ -159,46 +110,59 @@ class process_generate_image extends abstract_processor {
 
     #[\Override]
     protected function handle_api_success(ResponseInterface $response): array {
-        $responsebody = $response->getBody();
-        $bodyobj = json_decode($responsebody);
+        $bodyobj = json_decode((string) $response->getBody());
 
-        $predictions = $bodyobj->predictions;
-
-        // I have only one image.
-        $imagebase64 = $predictions[0]->bytesBase64Encoded;
+        foreach ($bodyobj->steps ?? [] as $step) {
+            foreach ($step->content ?? [] as $content) {
+                if (($content->type ?? '') === 'image' && !empty($content->data)) {
+                    return [
+                        'success' => true,
+                        'imagebase64' => $content->data,
+                        'mimetype' => $content->mime_type ?? 'image/jpeg',
+                        'sourceurl' => null,
+                        'revisedprompt' => null,
+                    ];
+                }
+            }
+        }
 
         return [
-            'success' => true,
-            'imagebase64' => $imagebase64,
+            'success' => false,
+            'errorcode' => 502,
+            'errormessage' => get_string('image_response_missing', 'aiprovider_gemini'),
         ];
     }
 
     /**
-     * Convert a base64 image to a stored_file object.
-     * Google Gemini returns images as base64 encoded strings.
+     * Convert base64 image data to a Moodle stored file.
      *
-     * @param int $userid The user id.
-     * @param string $base64image The base64 of the image.
-     * @return \stored_file The file object.
+     * @param int $userid The user ID.
+     * @param string $base64image The base64 image data.
+     * @param string $mimetype The image MIME type.
+     * @return \stored_file The stored file.
      */
-    private function base64_to_file(int $userid, string $base64image): \stored_file {
+    private function base64_to_file(int $userid, string $base64image, string $mimetype): \stored_file {
         global $CFG;
 
         require_once("{$CFG->libdir}/filelib.php");
 
-        // Create a temporary file to store the image, based on tiimestamp.
-        $filename = 'generatedimage_' . time() . '.png';
-
-        // Download the image and add the watermark.
+        $extension = match ($mimetype) {
+            'image/jpeg' => 'jpg',
+            'image/webp' => 'webp',
+            default => 'png',
+        };
+        $filename = 'generatedimage_' . time() . '.' . $extension;
         $tempdst = make_request_directory() . DIRECTORY_SEPARATOR . $filename;
-        $imagebase64decoded = base64_decode($base64image);
+
+        $imagebase64decoded = base64_decode($base64image, true);
+        if ($imagebase64decoded === false) {
+            throw new \coding_exception('The Gemini API returned invalid image data.');
+        }
         file_put_contents($tempdst, $imagebase64decoded);
 
         $image = new ai_image($tempdst);
         $image->add_watermark()->save();
 
-        // We put the file in the user draft area initially.
-        // Placements (on behalf of the user) can then move it to the correct location.
         $fileinfo = new \stdClass();
         $fileinfo->contextid = \context_user::instance($userid)->id;
         $fileinfo->filearea = 'draft';
@@ -211,24 +175,52 @@ class process_generate_image extends abstract_processor {
         return $fs->create_file_from_string($fileinfo, file_get_contents($tempdst));
     }
 
-
     /**
-     * Convert the given quality to an image size
-     * that is compatible with the Gemini Imagen API.
+     * Convert Moodle image quality to the Gemini image format.
      *
-     * @param string $quality The quality of the image.
-     * @return string The size of the image.
-     * quality: Changes the quality of the generated image. Supported values are
-     * "standard" and "hd". The default is "standard".
+     * @param string $quality The Moodle image quality.
+     * @return string The Gemini image size.
      */
     private function calculate_image_quality(string $quality): string {
-        switch ($quality) {
-            case 'standard':
-                return '1k';
-            case 'hd':
-                return '2k';
-            default:
-                throw new \coding_exception('Invalid image quality: ' . $quality);
+        return match ($quality) {
+            'standard' => '1K',
+            'hd' => '2K',
+            default => throw new \coding_exception('Invalid image quality: ' . $quality),
+        };
+    }
+
+    /**
+     * Validate image settings before making an API request.
+     *
+     * @return array|null An error response, or null when valid.
+     */
+    private function validate_image_configuration(): ?array {
+        if (!preg_match('/^gemini-3(?:\.\d+)*-(?:flash(?:-lite)?|pro)-image$/i', $this->get_model())) {
+            return [
+                'success' => false,
+                'errorcode' => 400,
+                'errormessage' => get_string('image_model_unsupported', 'aiprovider_gemini'),
+            ];
         }
+
+        if (!$this->uses_interactions()) {
+            return [
+                'success' => false,
+                'errorcode' => 400,
+                'errormessage' => get_string('image_endpoint_unsupported', 'aiprovider_gemini'),
+            ];
+        }
+
+        if (
+            $this->get_model() === 'gemini-3.1-flash-lite-image'
+            && $this->action->get_configuration('quality') === 'hd'
+        ) {
+            return [
+                'success' => false,
+                'errorcode' => 400,
+                'errormessage' => get_string('image_quality_unsupported', 'aiprovider_gemini'),
+            ];
+        }
+        return null;
     }
 }
