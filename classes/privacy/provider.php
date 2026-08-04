@@ -32,10 +32,9 @@ use core_privacy\local\request\userlist;
  * @codeCoverageIgnore
  */
 class provider implements
-    \core_privacy\local\metadata\provider,
     \core_privacy\local\request\core_userlist_provider,
+    \core_privacy\local\metadata\provider,
     \core_privacy\local\request\plugin\provider {
-    #[\Override]
     public static function get_metadata(collection $collection): collection {
         $collection->add_external_location_link('aiprovider_gemini', [
             'prompttext' => 'privacy:metadata:aiprovider_gemini:prompttext',
@@ -46,20 +45,20 @@ class provider implements
         return $collection;
     }
 
-    #[\Override]
+
     public static function get_contexts_for_userid(int $userid): contextlist {
         return new contextlist();
     }
 
-    #[\Override]
+
     public static function get_users_in_context(userlist $userlist) {
     }
 
-    #[\Override]
+
     public static function export_user_data(approved_contextlist $contextlist) {
     }
 
-    #[\Override]
+
     public static function delete_data_for_all_users_in_context(\context $context) {
     }
 
@@ -71,7 +70,7 @@ class provider implements
     public static function delete_data_for_users(approved_userlist $userlist) {
     }
 
-    #[\Override]
+
     public static function delete_data_for_user(approved_contextlist $contextlist) {
     }
 }

@@ -18,12 +18,9 @@ namespace aiprovider_gemini;
 
 use core_ai\aiactions;
 use core_ai\rate_limiter;
-use GuzzleHttp\Psr7\Request;
-use GuzzleHttp\Psr7\Uri;
-use Psr\Http\Message\RequestInterface;
-use Psr\Http\Message\ResponseInterface;
-use Psr\Http\Message\UriInterface;
 use core\http_client;
+use GuzzleHttp\Psr7\Request;
+use Psr\Http\Message\RequestInterface;
 
 /**
  * Class provider.
@@ -34,6 +31,12 @@ use core\http_client;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class provider extends \core_ai\provider {
+    /** @var string Gemini models endpoint. */
+    private const MODELS_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models';
+
+    /** @var string Gemini Interactions endpoint. */
+    public const INTERACTIONS_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/interactions';
+
     /** @var string The Google AI Studio - Gemini API key. */
     private string $apikey;
 
@@ -81,7 +84,7 @@ class provider extends \core_ai\provider {
      *
      * This is a hash of the site id and user id,
      * this means we can determine who made the request
-     * but don't pass any personal data to OpenAI.
+     * but don't pass any personal data to Google.
      *
      * @param string $userid The user id.
      * @return string The generated user id.
@@ -102,18 +105,20 @@ class provider extends \core_ai\provider {
             ->withAddedHeader('x-goog-api-key', $this->apikey);
     }
 
-    #[\Override]
+
     public function is_request_allowed(aiactions\base $action): array|bool {
         $ratelimiter = \core\di::get(rate_limiter::class);
         $component = \core\component::get_component_from_classname(get_class($this));
 
         // Check the user rate limit.
         if ($this->enableuserratelimit) {
-            if (!$ratelimiter->check_user_rate_limit(
-                component: $component,
-                ratelimit: $this->userratelimit,
-                userid: $action->get_configuration('userid')
-            )) {
+            if (
+                !$ratelimiter->check_user_rate_limit(
+                    component: $component,
+                    ratelimit: $this->userratelimit,
+                    userid: $action->get_configuration('userid')
+                )
+            ) {
                 return [
                     'success' => false,
                     'errorcode' => 429,
@@ -124,10 +129,12 @@ class provider extends \core_ai\provider {
 
         // Check the global rate limit.
         if ($this->enableglobalratelimit) {
-            if (!$ratelimiter->check_global_rate_limit(
-                component: $component,
-                ratelimit: $this->globalratelimit
-            )) {
+            if (
+                !$ratelimiter->check_global_rate_limit(
+                    component: $component,
+                    ratelimit: $this->globalratelimit
+                )
+            ) {
                 return [
                     'success' => false,
                     'errorcode' => 429,
@@ -166,15 +173,15 @@ class provider extends \core_ai\provider {
                 "aiprovider_gemini/action_{$actionname}_model",
                 new \lang_string("action:{$actionname}:model", 'aiprovider_gemini'),
                 new \lang_string("action:{$actionname}:model_desc", 'aiprovider_gemini'),
-                'gemini-2.5-flash',
+                $this->get_default_model($actionname),
                 $this->get_all_models($actionname),
             );
             // Add API endpoint.
             $settings[] = new \admin_setting_configtext(
                 "aiprovider_gemini/action_{$actionname}_endpoint",
                 new \lang_string("action:{$actionname}:endpoint", 'aiprovider_gemini'),
-                '',
-                'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',
+                new \lang_string('endpoint_desc', 'aiprovider_gemini'),
+                $this->get_default_endpoint($actionname),
                 PARAM_URL,
             );
             // Add system instruction settings.
@@ -191,18 +198,18 @@ class provider extends \core_ai\provider {
                 "aiprovider_gemini/action_{$actionname}_model",
                 new \lang_string("action:{$actionname}:model", 'aiprovider_gemini'),
                 new \lang_string("action:{$actionname}:model_desc", 'aiprovider_gemini'),
-                'imagen-4.0-generate-001',
+                'gemini-3.1-flash-image',
                 $this->get_all_models($actionname),
             );
             // Add API endpoint.
             $settings[] = new \admin_setting_configtext(
                 "aiprovider_gemini/action_{$actionname}_endpoint",
                 new \lang_string("action:{$actionname}:endpoint", 'aiprovider_gemini'),
-                '',
-                'https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict',
+                new \lang_string('endpoint_desc', 'aiprovider_gemini'),
+                self::INTERACTIONS_ENDPOINT,
                 PARAM_URL,
             );
-            // Imagen does not support system instructions.
+            // Gemini does not support system instructions for image generation.
         }
 
         return $settings;
@@ -218,13 +225,77 @@ class provider extends \core_ai\provider {
     }
 
     /**
+     * Return the default model for an action.
+     *
+     * @param string $actionname The action name.
+     * @return string The default model identifier.
+     */
+    private function get_default_model(string $actionname): string {
+        if ($actionname === 'generate_image') {
+            return 'gemini-3.1-flash-image';
+        }
+        return 'gemini-3.5-flash-lite';
+    }
+
+    /**
+     * Return the default endpoint for an action.
+     *
+     * @param string $actionname The action name.
+     * @return string The default endpoint.
+     */
+    private function get_default_endpoint(string $actionname): string {
+        return self::INTERACTIONS_ENDPOINT;
+    }
+
+    /**
+     * Decide whether a model is a stable Gemini model.
+     *
+     * @param string $modelid The model identifier without the models/ prefix.
+     * @return bool True when the model is suitable for this provider.
+     */
+    private function is_stable_model(string $modelid): bool {
+        if (!str_starts_with($modelid, 'gemini-')) {
+            return false;
+        }
+        return !preg_match(
+            '/(?:preview|experimental|^gemini-.*-exp$|-latest$|-live(?:-|$)|-tts(?:-|$)|embedding)/i',
+            $modelid
+        );
+    }
+
+    /**
+     * Decide whether a model supports the requested action.
+     *
+     * @param string $modelid The model identifier without the models/ prefix.
+     * @param array $supportedmethods Methods returned by the models endpoint.
+     * @param string $actionname The Moodle action name.
+     * @return bool True when the model belongs in the selector.
+     */
+    private function model_supports_action(
+        string $modelid,
+        array $supportedmethods,
+        string $actionname
+    ): bool {
+        $hasgeneratecontent = in_array('generateContent', $supportedmethods, true);
+
+        if ($actionname === 'generate_image') {
+            return preg_match('/^gemini-3(?:\.\d+)*-(?:flash(?:-lite)?|pro)-image$/i', $modelid)
+                && ($hasgeneratecontent
+                    || in_array('createInteraction', $supportedmethods, true)
+                    || empty($supportedmethods));
+        }
+
+        return !str_contains($modelid, '-image') && $hasgeneratecontent;
+    }
+
+    /**
      * Get list of all Gemini models.
      * @return array List of models.
      * @param string $actionname The action name (generate_text, generate_image, etc.).
      */
     private function get_all_models($actionname): array {
         // Call the Gemini API to get the list of models.
-        $endpoint = 'https://generativelanguage.googleapis.com/v1beta/models';
+        $endpoint = self::MODELS_ENDPOINT;
         $request = new Request(
             method: 'GET',
             uri: $endpoint,
@@ -241,35 +312,30 @@ class provider extends \core_ai\provider {
                 }
                 $responsebody = $response->getBody();
                 $bodyobj = json_decode($responsebody->getContents());
-                /*
-                * Filter models based on the action name.
-                */
-                if ($actionname === 'generate_text' || $actionname === 'summarise_text') {
-                    // Regex to filter model "gemini-version-tipo".
-                    $pattern = '/^models\/gemini-\d+(\.\d+)?(-\d+)?-(pro|flash|flash-lite)(-8b)?$/';
-                } else if ($actionname === 'generate_image') {
-                    // Regex to filter imagen models, only stable versions.
-                    // Struttura: models/imagen-x.y-generate-<numero>.
-                    $pattern = '/^models\/imagen-\d+(\.\d+)?(-[a-z]+)?-generate-\d+$/i';
-                } else {
+                if (!in_array($actionname, ['generate_text', 'summarise_text', 'generate_image'], true)) {
                     return [];
                 }
-                foreach ($bodyobj->models as $model) {
-                    if (preg_match($pattern, $model->name)) {
-                        $cleanid = str_replace('models/', '', $model->name);
-                        $displayname = isset($model->displayName) ? $model->displayName : $cleanid;
-                        $models[$cleanid] = $displayname;
+                foreach ($bodyobj->models ?? [] as $model) {
+                    $cleanid = str_replace('models/', '', $model->name ?? '');
+                    $supportedmethods = (array) ($model->supportedGenerationMethods ?? []);
+                    if (
+                        !$this->is_stable_model($cleanid)
+                        || !$this->model_supports_action($cleanid, $supportedmethods, $actionname)
+                    ) {
+                        continue;
                     }
+                    $displayname = $model->displayName ?? $cleanid;
+                    $models[$cleanid] = $displayname;
                 }
 
-                if (isset($bodyobj->nextPageToken)) {
+                if (!empty($bodyobj->nextPageToken)) {
                     $request = new Request(
                         method: 'GET',
                         uri: $endpoint . '?pageToken=' . $bodyobj->nextPageToken,
                     );
                     $request = $this->add_authentication_headers($request);
                 }
-            } while (isset($bodyobj->nextPageToken));
+            } while (!empty($bodyobj->nextPageToken));
 
             return $models;
         } catch (\Exception $e) {

@@ -1,0 +1,22 @@
+{
+    "id": "interaction-test-id",
+    "model": "gemini-3.5-flash-lite",
+    "object": "interaction",
+    "status": "completed",
+    "steps": [
+        {
+            "type": "model_output",
+            "content": [
+                {
+                    "type": "text",
+                    "text": "Generated interaction response."
+                }
+            ]
+        }
+    ],
+    "usage": {
+        "total_input_tokens": 7,
+        "total_output_tokens": 20,
+        "total_tokens": 27
+    }
+}

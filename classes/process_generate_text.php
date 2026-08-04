@@ -31,73 +31,51 @@ use Psr\Http\Message\UriInterface;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class process_generate_text extends abstract_processor {
-    #[\Override]
     protected function get_endpoint(): UriInterface {
         return new Uri(get_config('aiprovider_gemini', 'action_generate_text_endpoint'));
     }
 
-    #[\Override]
+
     protected function get_model(): string {
         return get_config('aiprovider_gemini', 'action_generate_text_model');
     }
 
-    #[\Override]
+
     protected function get_system_instruction(): string {
         return get_config('aiprovider_gemini', 'action_generate_text_systeminstruction');
     }
 
-    #[\Override]
+
     protected function create_request_object(string $userid): RequestInterface {
-        /*
-         Google Gemini REST API requires a specific request format.
-         Example request body:
-
-        {
-            "system_instruction": {
-              "parts": [
-                {
-                  "text": "You are a cat. Your name is Neko."
-                }
-              ]
-            },
-            "contents": [
-                {
-                    "parts": [
-                        {
-                            "text": "Hello there"
-                        }
-                    ]
-                }
-            ]
-        }
-        */
-
-        // Create the user object.
-        $userobj = new \stdClass();
-        $userobj->role = 'user';
-        $userobj->parts = [
-            "text" => $this->action->get_configuration('prompttext'),
-        ];
-
-        // Create the request object.
-        $requestobj = new \stdClass();
-
-        // Set model and system instruction.
-        $requestobj->model = $this->get_model();
-
-        // If there is a system string available, use it.
+        $prompttext = $this->action->get_configuration('prompttext');
         $systeminstruction = $this->get_system_instruction();
-        if (!empty($systeminstruction)) {
-            $systemobj = new \stdClass();
-            $systemobj->role = 'model';
-            $systemobj->parts = [
-                ["text" => $systeminstruction],
-            ];
 
-            $requestobj->system_instruction = $systemobj;
-            $requestobj->contents = $userobj;
+        if ($this->uses_interactions()) {
+            $requestobj = (object) [
+                'model' => $this->get_model(),
+                'input' => $prompttext,
+            ];
+            if (!empty($systeminstruction)) {
+                $requestobj->system_instruction = $systeminstruction;
+            }
         } else {
-            $requestobj->contents = $userobj;
+            $requestobj = (object) [
+                'contents' => [
+                    (object) [
+                        'role' => 'user',
+                        'parts' => [
+                            (object) ['text' => $prompttext],
+                        ],
+                    ],
+                ],
+            ];
+            if (!empty($systeminstruction)) {
+                $requestobj->system_instruction = (object) [
+                    'parts' => [
+                        (object) ['text' => $systeminstruction],
+                    ],
+                ];
+            }
         }
 
         return new Request(
@@ -117,18 +95,50 @@ class process_generate_text extends abstract_processor {
      * @return array The response.
      */
     protected function handle_api_success(ResponseInterface $response): array {
-        $bodystring = (string) $response->getBody();
-        $responsebody = json_decode($bodystring);
+        $responsebody = json_decode((string) $response->getBody());
 
-        $usagemetadata = $responsebody->usageMetadata;
+        if ($this->uses_interactions()) {
+            return $this->handle_interactions_success($responsebody);
+        }
+
         $bodycandidate = $responsebody->candidates[0] ?? null;
+        $usagemetadata = $responsebody->usageMetadata ?? null;
         return [
             'success' => true,
-            'id' => $responsebody->responseId,
-            'generatedcontent' => $bodycandidate->content->parts[0]->text,
+            'id' => $responsebody->responseId ?? null,
+            'generatedcontent' => $bodycandidate->content->parts[0]->text ?? '',
             'finishreason' => $bodycandidate->finishReason ?? 'unknown',
-            'prompttokens' => $usagemetadata->promptTokenCount,
-            'completiontokens' => $usagemetadata->totalTokenCount,
+            'prompttokens' => $usagemetadata->promptTokenCount ?? 0,
+            'completiontokens' => $usagemetadata->candidatesTokenCount
+                ?? $usagemetadata->totalTokenCount
+                ?? 0,
+        ];
+    }
+
+    /**
+     * Handle a successful Interactions API response.
+     *
+     * @param object|null $responsebody Decoded response body.
+     * @return array The normalised Moodle response.
+     */
+    private function handle_interactions_success(?object $responsebody): array {
+        $textparts = [];
+        foreach ($responsebody->steps ?? [] as $step) {
+            foreach ($step->content ?? [] as $content) {
+                if (($content->type ?? '') === 'text' && isset($content->text)) {
+                    $textparts[] = $content->text;
+                }
+            }
+        }
+
+        $usage = $responsebody->usage ?? null;
+        return [
+            'success' => true,
+            'id' => $responsebody->id ?? null,
+            'generatedcontent' => implode('', $textparts),
+            'finishreason' => $responsebody->status ?? 'completed',
+            'prompttokens' => $usage->total_input_tokens ?? 0,
+            'completiontokens' => $usage->total_output_tokens ?? 0,
         ];
     }
 }

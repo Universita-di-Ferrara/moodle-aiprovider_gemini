@@ -35,6 +35,15 @@ use Psr\Http\Message\UriInterface;
  */
 abstract class abstract_processor extends process_base {
     /**
+     * Whether the configured endpoint uses the Gemini Interactions API.
+     *
+     * @return bool True when the endpoint is the Interactions endpoint.
+     */
+    protected function uses_interactions(): bool {
+        return str_ends_with(rtrim((string) $this->get_endpoint(), '/'), '/interactions');
+    }
+
+    /**
      * Get the endpoint URI.
      *
      * @return UriInterface
@@ -58,14 +67,14 @@ abstract class abstract_processor extends process_base {
     }
 
     /**
-     * Create the request object to send to the OpenAI API.
+     * Create the request object to send to the Gemini API.
      *
      * This object contains all the required parameters for the request.
      *
      *
      *
      * @param string $userid The user id.
-     * @return RequestInterface The request object to send to the OpenAI API.
+     * @return RequestInterface The request object to send to the Gemini API.
      */
     abstract protected function create_request_object(
         string $userid,
@@ -79,7 +88,7 @@ abstract class abstract_processor extends process_base {
      */
     abstract protected function handle_api_success(ResponseInterface $response): array;
 
-    #[\Override]
+
     protected function query_ai_api(): array {
 
         // Create the request object.
@@ -104,7 +113,7 @@ abstract class abstract_processor extends process_base {
         }
         // Double-check the response codes, in case of a non 200 that didn't throw an error.
         $status = $response->getStatusCode();
-        if ($status === 200) {
+        if (in_array($status, [200, 201], true)) {
             return $this->handle_api_success($response);
         } else {
             return $this->handle_api_error($response);
@@ -128,7 +137,8 @@ abstract class abstract_processor extends process_base {
             $responsearr['errormessage'] = $response->getReasonPhrase();
         } else {
             $bodyobj = json_decode($response->getBody()->getContents());
-            $responsearr['errormessage'] = $bodyobj->error->message;
+            $responsearr['errormessage'] = $bodyobj?->error?->message
+                ?? get_string('unknownerror', 'error');
         }
 
         return $responsearr;
