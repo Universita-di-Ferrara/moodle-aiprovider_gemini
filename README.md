@@ -4,7 +4,7 @@
 
 The Gemini API Provider plugin integrates Google's Gemini AI models into Moodle's AI framework, enabling powerful AI capabilities across your learning management system. This plugin supports text generation, image generation, and text summarization using Google's state-of-the-art AI models.
 
-## New version 2.1.0 Highlights
+## New version 2.2.0 Highlights
 
 - **Gemini 3 support**: Text generation and summarisation support stable Gemini 3 models, including `gemini-3.5-flash-lite`, through the Interactions API.
 - **Native Gemini image generation**: Image generation uses Gemini native image models instead of the deprecated Imagen 4 API.
