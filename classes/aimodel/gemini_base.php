@@ -30,6 +30,13 @@ interface gemini_base {
     /** @var int MODEL_TYPE_IMAGE Image model type. */
     public const MODEL_TYPE_IMAGE = 2;
 
+    /** @var string API used for Gemini generateContent requests. */
+    public const API_GENERATE_CONTENT = 'generate_content';
+    /** @var string API used for Gemini Interactions requests. */
+    public const API_INTERACTIONS = 'interactions';
+    /** @var string API used for legacy Imagen predict requests. */
+    public const API_PREDICT = 'predict';
+
     /**
      * Get model type.
      *

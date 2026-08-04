@@ -30,7 +30,7 @@ use MoodleQuickForm;
 class gemini3_1_flash_lite extends base implements gemini_base {
     #[\Override]
     public function get_model_name(): string {
-        return 'gemini-3.1-flash-lite-preview';
+        return 'gemini-3.1-flash-lite';
     }
 
     #[\Override]
@@ -53,14 +53,6 @@ class gemini3_1_flash_lite extends base implements gemini_base {
 
     #[\Override]
     public function add_model_settings(MoodleQuickForm $mform): void {
-        $mform->addElement(
-            'text',
-            'topP',
-            get_string('settings_top_p', 'aiprovider_gemini'),
-        );
-        $mform->setType('topP', PARAM_FLOAT);
-        $mform->addHelpButton('topP', 'settings_top_p', 'aiprovider_gemini');
-
         $mform->addElement(
             'text',
             'maxOutputTokens',

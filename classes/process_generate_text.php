@@ -33,61 +33,44 @@ use Psr\Http\Message\UriInterface;
 class process_generate_text extends abstract_processor {
     #[\Override]
     protected function create_request_object(string $userid): RequestInterface {
-        /*
-         Google Gemini REST API requires a specific request format.
-         Example request body:
-
-        {
-            "system_instruction": {
-              "parts": [
-                {
-                  "text": "You are a cat. Your name is Neko."
-                }
-              ]
-            },
-            "contents": [
-                {
-                    "parts": [
-                        {
-                            "text": "Hello there"
-                        }
-                    ]
-                }
-            ]
-        }
-        */
-
-        // Create the user object.
-        $userobj = new \stdClass();
-        $userobj->role = 'user';
-        $userobj->parts = [
-            "text" => $this->action->get_configuration('prompttext'),
-        ];
-
-        // Create the request object.
-        $requestobj = new \stdClass();
-
-        // Set model and system instruction.
-        $requestobj->model = $this->get_model();
-
-        // If there is a system string available, use it.
+        $prompt = $this->action->get_configuration('prompttext');
         $systeminstruction = $this->get_system_instruction();
-        if (!empty($systeminstruction)) {
-            $systemobj = new \stdClass();
-            $systemobj->role = 'model';
-            $systemobj->parts = [
-                ["text" => $systeminstruction],
+        $modelsettings = $this->get_model_settings();
+
+        if ($this->get_api_type() === \aiprovider_gemini\aimodel\gemini_base::API_INTERACTIONS) {
+            $requestobj = (object) [
+                'model' => $this->get_model(),
+                'input' => $prompt,
             ];
-
-            $requestobj->system_instruction = $systemobj;
-            $requestobj->contents = $userobj;
+            if (!empty($systeminstruction)) {
+                $requestobj->system_instruction = $systeminstruction;
+            }
+            if (!empty($modelsettings['maxOutputTokens'])) {
+                $requestobj->generation_config = (object) [
+                    'max_output_tokens' => (int) $modelsettings['maxOutputTokens'],
+                ];
+            }
         } else {
-            $requestobj->contents = $userobj;
-        }
-
-        // Append the extra model settings. TO DO: check if Gemini supports them.
-        if ($modelsettings = $this->get_model_settings()) {
-            $requestobj->generationConfig = $modelsettings;
+            $requestobj = (object) [
+                'contents' => [
+                    (object) [
+                        'role' => 'user',
+                        'parts' => [
+                            (object) ['text' => $prompt],
+                        ],
+                    ],
+                ],
+            ];
+            if (!empty($systeminstruction)) {
+                $requestobj->system_instruction = (object) [
+                    'parts' => [
+                        (object) ['text' => $systeminstruction],
+                    ],
+                ];
+            }
+            if ($modelsettings) {
+                $requestobj->generationConfig = (object) $modelsettings;
+            }
         }
 
         return new Request(
@@ -110,15 +93,47 @@ class process_generate_text extends abstract_processor {
         $bodystring = (string) $response->getBody();
         $responsebody = json_decode($bodystring);
 
-        $usagemetadata = $responsebody->usageMetadata;
+        if ($this->get_api_type() === \aiprovider_gemini\aimodel\gemini_base::API_INTERACTIONS) {
+            $generatedcontent = $responsebody->output_text ?? $this->get_interaction_text($responsebody);
+            $usage = $responsebody->usage ?? null;
+            return [
+                'success' => true,
+                'id' => $responsebody->id ?? null,
+                'generatedcontent' => $generatedcontent,
+                'finishreason' => 'stop',
+                'prompttokens' => $usage->input_tokens ?? 0,
+                'completiontokens' => $usage->output_tokens ?? 0,
+            ];
+        }
+
+        $usagemetadata = $responsebody->usageMetadata ?? (object) [];
         $bodycandidate = $responsebody->candidates[0] ?? null;
+        $generatedcontent = $bodycandidate->content->parts[0]->text ?? '';
         return [
             'success' => true,
-            'id' => $responsebody->responseId,
-            'generatedcontent' => $bodycandidate->content->parts[0]->text,
+            'id' => $responsebody->responseId ?? null,
+            'generatedcontent' => $generatedcontent,
             'finishreason' => $bodycandidate->finishReason ?? 'unknown',
-            'prompttokens' => $usagemetadata->promptTokenCount,
-            'completiontokens' => $usagemetadata->totalTokenCount,
+            'prompttokens' => $usagemetadata->promptTokenCount ?? 0,
+            'completiontokens' => $usagemetadata->candidatesTokenCount ?? $usagemetadata->totalTokenCount ?? 0,
         ];
+    }
+
+    /**
+     * Extract text from the raw Interactions API response.
+     *
+     * @param object $responsebody Decoded response body.
+     * @return string Generated text.
+     */
+    private function get_interaction_text(object $responsebody): string {
+        $text = '';
+        foreach (($responsebody->steps ?? []) as $step) {
+            foreach (($step->content ?? []) as $content) {
+                if (($content->type ?? '') === 'text') {
+                    $text .= $content->text ?? '';
+                }
+            }
+        }
+        return $text;
     }
 }

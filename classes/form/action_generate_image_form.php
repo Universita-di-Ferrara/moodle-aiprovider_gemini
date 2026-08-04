@@ -44,7 +44,7 @@ class action_generate_image_form extends action_form {
         $mform->setType('endpoint', PARAM_URL);
         $mform->addRule('endpoint', null, 'required', null, 'client');
         $mform->setDefault('endpoint', $this->actionconfig['endpoint'] ??
-        'https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict');
+        'https://generativelanguage.googleapis.com/v1beta/interactions');
 
         if ($this->returnurl) {
             $mform->addElement('hidden', 'returnurl', $this->returnurl);

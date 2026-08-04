@@ -130,11 +130,10 @@ class provider extends \core_ai\provider {
                 */
                 if ($actionname === 'generate_text' || $actionname === 'summarise_text') {
                     // Regex to filter model "gemini-version-tipo".
-                    $pattern = '/^models\/gemini-\d+(\.\d+)?(-\d+)?-(pro|flash|flash-lite)(-8b)?$/';
+                    $pattern = '/^models\/gemini-\d+(\.\d+)?(-\d+)?-(pro|flash|flash-lite)(-8b)?(-preview)?$/';
                 } else if ($actionname === 'generate_image') {
-                    // Regex to filter imagen models, only stable versions.
-                    // Struttura: models/imagen-x.y-generate-<numero>.
-                    $pattern = '/^models\/imagen-\d+(\.\d+)?(-[a-z]+)?-generate-\d+$/i';
+                    // Filter native Gemini image models. Imagen models are deprecated.
+                    $pattern = '/^models\/gemini-\d+(\.\d+)?-[a-z-]+-image$/i';
                 } else {
                     return [];
                 }

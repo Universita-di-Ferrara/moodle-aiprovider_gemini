@@ -16,7 +16,6 @@
 
 namespace aiprovider_gemini;
 
-use aiprovider_gemini\model\base;
 use core_ai\hook\after_ai_action_settings_form_hook;
 use core_ai\hook\after_ai_provider_form_hook;
 

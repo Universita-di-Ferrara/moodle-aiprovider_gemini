@@ -85,22 +85,6 @@ class action_form extends action_settings_form {
                 } else {
                     // Set the model to the selected model template.
                     $data->model = $data->modeltemplate;
-
-                    // Cast settings to their intended types.
-                    if ($data->model === 'gemini-2.5-flash') {
-                        if (isset($data->top_p)) {
-                            $data->top_p = floatval($data->top_p);
-                        }
-                        if (isset($data->max_completion_tokens)) {
-                            $data->max_completion_tokens = intval($data->max_completion_tokens);
-                        }
-                        if (isset($data->presence_penalty)) {
-                            $data->presence_penalty = floatval($data->presence_penalty);
-                        }
-                        if (isset($data->frequency_penalty)) {
-                            $data->frequency_penalty = floatval($data->frequency_penalty);
-                        }
-                    }
                 }
             }
             // Unset the model template.
@@ -174,7 +158,8 @@ class action_form extends action_settings_form {
         ) {
             $defaultmodel = 'custom';
         } else if (empty($this->actionconfig['model'])) {
-            $defaultmodel = ($actionname === 'generate_image') ? 'imagen-4.0-' : 'gemini-2.5-flash';
+            $defaultmodel = ($actionname === 'generate_image') ?
+                'gemini-3.1-flash-image' : 'gemini-3.6-flash';
         } else {
             $defaultmodel = $this->actionconfig['model'];
         }

@@ -56,10 +56,9 @@ $string['enableglobalratelimit_desc'] = 'Limit the number of requests that the G
 $string['enableuserratelimit'] = 'Set user rate limit';
 $string['enableuserratelimit_desc'] = 'Limit the number of requests each user can make to the Gemini API provider every hour.';
 $string['extraparams'] = 'Extra parameters';
-$string['extraparams_help'] = 'Extra parameters can be configured here. We support JSON format. For example:
+$string['extraparams_help'] = 'Extra parameters can be configured here. We support JSON format. Sampling parameters such as temperature, top_p and top_k are not supported. For example:
 <pre>
 {
-    "temperature": 0.5,
     "max_completion_tokens": 100
 }
 </pre>';
@@ -82,7 +81,5 @@ $string['settings_max_completion_tokens'] = 'max_completion_tokens';
 $string['settings_max_completion_tokens_help'] = 'The maximum number of tokens used in the generated text.';
 $string['settings_presence_penalty'] = 'presence_penalty';
 $string['settings_presence_penalty_help'] = 'The presence penalty encourages the model to use new words by increasing the likelihood of choosing words it hasn\'t used before. A higher value makes the generated text more diverse, while a lower value allows more repetition.';
-$string['settings_top_p'] = 'top_p';
-$string['settings_top_p_help'] = 'top_p (nucleus sampling) determines how many possible words to consider. A high value (e.g. 0.9) means the model looks at more words, which makes the generated text more diverse.';
 $string['userratelimit'] = 'Maximum number of requests per user';
 $string['userratelimit_desc'] = 'The number of requests allowed per hour, per user.';

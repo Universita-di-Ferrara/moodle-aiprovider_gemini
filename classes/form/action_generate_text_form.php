@@ -43,8 +43,8 @@ class action_generate_text_form extends action_form {
         );
         $mform->setType('endpoint', PARAM_URL);
         $mform->addRule('endpoint', null, 'required', null, 'client');
-        $mform->setDefault('endpoint', $actionconfig['endpoint'] ??
-        'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent');
+        $mform->setDefault('endpoint', $this->actionconfig['endpoint'] ??
+        'https://generativelanguage.googleapis.com/v1beta/interactions');
 
         // System Instructions.
         $mform->addElement(
