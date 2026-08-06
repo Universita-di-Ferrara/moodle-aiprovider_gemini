@@ -78,6 +78,64 @@ class process_generate_image extends abstract_processor {
 
     #[\Override]
     protected function create_request_object(string $userid): RequestInterface {
+        $apitype = $this->get_api_type();
+        $prompt = $this->action->get_configuration('prompttext');
+        $ratio = $this->calculate_size($this->action->get_configuration('aspectratio'));
+        $imagesize = $this->calculate_image_quality($this->action->get_configuration('quality'));
+
+        if ($apitype === \aiprovider_gemini\aimodel\gemini_base::API_INTERACTIONS) {
+            $requestobj = (object) [
+                'model' => $this->get_model(),
+                'input' => $prompt,
+                'response_format' => (object) [
+                    'type' => 'image',
+                    'mime_type' => 'image/jpeg',
+                    'aspect_ratio' => $ratio,
+                    'image_size' => $imagesize,
+                ],
+            ];
+
+            return new Request(
+                method: 'POST',
+                uri: '',
+                body: json_encode($requestobj),
+                headers: [
+                    'Content-Type' => 'application/json',
+                ],
+            );
+        }
+
+        if ($apitype === \aiprovider_gemini\aimodel\gemini_base::API_GENERATE_CONTENT) {
+            $requestobj = (object) [
+                'contents' => [
+                    (object) [
+                        'role' => 'user',
+                        'parts' => [
+                            (object) ['text' => $prompt],
+                        ],
+                    ],
+                ],
+                'generationConfig' => (object) [
+                    'responseModalities' => ['IMAGE'],
+                    'responseFormat' => (object) [
+                        'image' => (object) [
+                            'aspectRatio' => $ratio,
+                            'imageSize' => $imagesize,
+                        ],
+                    ],
+                ],
+            ];
+
+            return new Request(
+                method: 'POST',
+                uri: '',
+                body: json_encode($requestobj),
+                headers: [
+                    'Content-Type' => 'application/json',
+                ],
+            );
+        }
+
         /* ATTENTION: PROMPT TEXT MUST BE IN ENGLISH:
         * en: english (default value)
         * zh o zh-CN: chinese (simplified)
@@ -127,14 +185,14 @@ class process_generate_image extends abstract_processor {
 
         $requestobj->instances = [
             (object) [
-                'prompt' => $this->action->get_configuration('prompttext'),
+                'prompt' => $prompt,
             ],
         ];
 
         $requestobj->parameters = (object) [
             'sampleCount' => $this->numberimages,
-            'aspectRatio' => $this->calculate_size($this->action->get_configuration('aspectratio')),
-            'imageSize' => $this->calculate_image_quality($this->action->get_configuration('quality')),
+            'aspectRatio' => $ratio,
+            'imageSize' => $imagesize,
             'languageCode' => 'en', // Force English for best results.
         ];
 
@@ -157,17 +215,61 @@ class process_generate_image extends abstract_processor {
     #[\Override]
     protected function handle_api_success(ResponseInterface $response): array {
         $responsebody = $response->getBody();
-        $bodyobj = json_decode($responsebody);
+        $bodyobj = json_decode((string) $responsebody);
 
-        $predictions = $bodyobj->predictions;
+        if ($this->get_api_type() === \aiprovider_gemini\aimodel\gemini_base::API_INTERACTIONS) {
+            $imagebase64 = $bodyobj->output_image->data ?? $this->get_interaction_image($bodyobj);
+        } else if ($this->get_api_type() === \aiprovider_gemini\aimodel\gemini_base::API_GENERATE_CONTENT) {
+            $imagebase64 = $this->get_generate_content_image($bodyobj);
+        } else {
+            $imagebase64 = $bodyobj->predictions[0]->bytesBase64Encoded ?? null;
+        }
 
-        // I have only one image.
-        $imagebase64 = $predictions[0]->bytesBase64Encoded;
+        if (empty($imagebase64)) {
+            return \core_ai\error\factory::create(
+                502,
+                'The Gemini API response did not contain an image.',
+            )->get_error_details();
+        }
 
         return [
             'success' => true,
             'imagebase64' => $imagebase64,
+            'model' => $this->get_response_model($bodyobj),
         ];
+    }
+
+    /**
+     * Extract an image from an Interactions API response.
+     *
+     * @param object $responsebody Decoded response body.
+     * @return string|null Image data.
+     */
+    private function get_interaction_image(object $responsebody): ?string {
+        foreach (($responsebody->steps ?? []) as $step) {
+            foreach (($step->content ?? []) as $content) {
+                if (($content->type ?? '') !== 'image') {
+                    continue;
+                }
+                return $content->data ?? $content->inline_data->data ?? $content->inlineData->data ?? null;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Extract an inline image from a generateContent response.
+     *
+     * @param object $responsebody Decoded response body.
+     * @return string|null Image data.
+     */
+    private function get_generate_content_image(object $responsebody): ?string {
+        foreach (($responsebody->candidates ?? []) as $candidate) {
+            foreach (($candidate->content->parts ?? []) as $part) {
+                return $part->inlineData->data ?? $part->inline_data->data ?? null;
+            }
+        }
+        return null;
     }
 
     /**
@@ -184,7 +286,8 @@ class process_generate_image extends abstract_processor {
         require_once("{$CFG->libdir}/filelib.php");
 
         // Create a temporary file to store the image, based on tiimestamp.
-        $filename = 'generatedimage_' . time() . '.png';
+        $extension = $this->get_api_type() === \aiprovider_gemini\aimodel\gemini_base::API_INTERACTIONS ? 'jpg' : 'png';
+        $filename = 'generatedimage_' . time() . '.' . $extension;
 
         // Download the image and add the watermark.
         $tempdst = make_request_directory() . DIRECTORY_SEPARATOR . $filename;
@@ -219,11 +322,24 @@ class process_generate_image extends abstract_processor {
      * "standard" and "hd". The default is "standard".
      */
     private function calculate_image_quality(string $quality): string {
+        if (str_contains($this->get_model(), 'flash-lite-image')) {
+            return '1K';
+        }
+        if ($this->get_api_type() === \aiprovider_gemini\aimodel\gemini_base::API_PREDICT) {
+            switch ($quality) {
+                case 'standard':
+                    return '1k';
+                case 'hd':
+                    return '2k';
+                default:
+                    throw new \coding_exception('Invalid image quality: ' . $quality);
+            }
+        }
         switch ($quality) {
             case 'standard':
-                return '1k';
+                return '1K';
             case 'hd':
-                return '2k';
+                return '2K';
             default:
                 throw new \coding_exception('Invalid image quality: ' . $quality);
         }

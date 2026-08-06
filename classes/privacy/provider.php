@@ -23,7 +23,7 @@ use core_privacy\local\request\contextlist;
 use core_privacy\local\request\userlist;
 
 /**
- * Privacy provider implementation for OpenAI provider
+ * Privacy provider implementation for Gemini provider
  *
  * @package    aiprovider_gemini
  * @copyright  2025 University of Ferrara, Italy
@@ -32,8 +32,8 @@ use core_privacy\local\request\userlist;
  * @codeCoverageIgnore
  */
 class provider implements
-    \core_privacy\local\request\core_userlist_provider,
     \core_privacy\local\metadata\provider,
+    \core_privacy\local\request\core_userlist_provider,
     \core_privacy\local\request\plugin\provider {
     #[\Override]
     public static function get_metadata(collection $collection): collection {

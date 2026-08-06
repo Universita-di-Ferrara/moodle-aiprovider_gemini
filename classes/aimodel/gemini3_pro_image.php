@@ -17,25 +17,24 @@
 namespace aiprovider_gemini\aimodel;
 
 use core_ai\aimodel\base;
-use MoodleQuickForm;
 
 /**
- * Imagen 4.0 Ultra AI model for image generation.
+ * Gemini 3 Pro Image model.
  *
  * @package    aiprovider_gemini
- * @copyright  University of Ferrara, Italy
- * @author     Andrea Bertelli <andrea.bertell@unife.it>
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @copyright 2026 University of Ferrara, Italy
+ * @author    Andrea Bertelli <andrea.bertelli@unife.it>
+ * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class imagen4_0_ultra_generate_001 extends base implements gemini_base {
+class gemini3_pro_image extends base implements gemini_base {
     #[\Override]
     public function get_model_name(): string {
-        return 'imagen-4.0-ultra-generate-001';
+        return 'gemini-3-pro-image';
     }
 
     #[\Override]
     public function get_model_display_name(): string {
-        return 'Imagen 4.0 Ultra';
+        return 'Gemini 3 Pro Image';
     }
 
     #[\Override]
@@ -44,11 +43,12 @@ class imagen4_0_ultra_generate_001 extends base implements gemini_base {
     }
 
     /**
-     * Get the endpoint for Imagen 4.0.
+     * Get the endpoint for Gemini 3 Pro Image.
+     *
      * @return string The endpoint URL.
      */
     public function get_endpoint(): string {
-        return 'https://generativelanguage.googleapis.com/v1beta/models/' . $this->get_model_name() . ':predict';
+        return 'https://generativelanguage.googleapis.com/v1beta/interactions';
     }
 
     #[\Override]

@@ -17,61 +17,42 @@
 namespace aiprovider_gemini\aimodel;
 
 use core_ai\aimodel\base;
-use MoodleQuickForm;
 
 /**
- * Gemini 2.5 flash AI model.
+ * Gemini 3.1 Flash Image model.
  *
  * @package    aiprovider_gemini
- * @copyright  University of Ferrara, Italy
- * @author     Andrea Bertelli <andrea.bertell@unife.it>
+ * @copyright  2026 University of Ferrara, Italy
+ * @author     Andrea Bertelli <andrea.bertelli@unife.it>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class gemini2_5_flash extends base implements gemini_base {
+class gemini3_1_flash_image extends base implements gemini_base {
     #[\Override]
     public function get_model_name(): string {
-        return 'gemini-2.5-flash';
+        return 'gemini-3.1-flash-image';
     }
 
     #[\Override]
     public function get_model_display_name(): string {
-        return 'Gemini 2.5 flash';
+        return 'Gemini 3.1 Flash Image';
     }
 
     #[\Override]
     public function has_model_settings(): bool {
-        return true;
+        return false;
     }
 
     /**
-     * Get the endpoint for Gemini 2.5 Flash.
+     * Get the endpoint for Gemini 3.1 Flash Image.
+     *
      * @return string The endpoint URL.
      */
     public function get_endpoint(): string {
-        return 'https://generativelanguage.googleapis.com/v1beta/models/' . $this->get_model_name() . ':generateContent';
-    }
-
-    #[\Override]
-    public function add_model_settings(MoodleQuickForm $mform): void {
-        $mform->addElement(
-            'text',
-            'topP',
-            get_string('settings_top_p', 'aiprovider_gemini'),
-        );
-        $mform->setType('topP', PARAM_FLOAT);
-        $mform->addHelpButton('topP', 'settings_top_p', 'aiprovider_gemini');
-
-        $mform->addElement(
-            'text',
-            'maxOutputTokens',
-            get_string('settings_max_completion_tokens', 'aiprovider_gemini'),
-        );
-        $mform->setType('maxOutputTokens', PARAM_INT);
-        $mform->addHelpButton('maxOutputTokens', 'settings_max_completion_tokens', 'aiprovider_gemini');
+        return 'https://generativelanguage.googleapis.com/v1beta/interactions';
     }
 
     #[\Override]
     public function model_type(): array {
-        return [self::MODEL_TYPE_TEXT];
+        return [self::MODEL_TYPE_IMAGE];
     }
 }

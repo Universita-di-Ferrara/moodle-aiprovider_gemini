@@ -55,14 +55,6 @@ class gemini3_flash extends base implements gemini_base {
     public function add_model_settings(MoodleQuickForm $mform): void {
         $mform->addElement(
             'text',
-            'topP',
-            get_string('settings_top_p', 'aiprovider_gemini'),
-        );
-        $mform->setType('topP', PARAM_FLOAT);
-        $mform->addHelpButton('topP', 'settings_top_p', 'aiprovider_gemini');
-
-        $mform->addElement(
-            'text',
             'maxOutputTokens',
             get_string('settings_max_completion_tokens', 'aiprovider_gemini'),
         );

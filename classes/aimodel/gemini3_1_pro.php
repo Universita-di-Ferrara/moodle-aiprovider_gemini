@@ -53,15 +53,6 @@ class gemini3_1_pro extends base implements gemini_base {
 
     #[\Override]
     public function add_model_settings(MoodleQuickForm $mform): void {
-        // Queste impostazioni sono tipiche, puoi mantenerle o personalizzarle per il modello Pro.
-        $mform->addElement(
-            'text',
-            'topP',
-            get_string('settings_top_p', 'aiprovider_gemini'),
-        );
-        $mform->setType('topP', PARAM_FLOAT);
-        $mform->addHelpButton('topP', 'settings_top_p', 'aiprovider_gemini');
-
         $mform->addElement(
             'text',
             'maxOutputTokens',

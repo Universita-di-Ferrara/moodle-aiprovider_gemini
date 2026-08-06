@@ -80,17 +80,20 @@ The plugin supports two types of rate limiting:
 ### Model Configuration
 
 #### Text Generation Models
-- **Default**: `gemini-2.5-flash`
-- **Available**: All Gemini models (Pro, Flash, Flash-Lite variants)
+- **Default**: `gemini-3.6-flash`
+- **Available**: `gemini-3.6-flash`, `gemini-3.5-flash`, `gemini-3.5-flash-lite`, `gemini-3.1-flash-lite`, `gemini-3.1-pro-preview`, and `gemini-3-flash-preview`
 - **System Instructions**: Customizable prompts for consistent AI behavior
+- **API compatibility**: New stable models use the Gemini Interactions API; supported preview models use `generateContent`.
 
 #### Image Generation Models
-- **Default**: `imagen-4.0-generate-001`
-- **Available**: All Imagen models
-- **Features**: High-quality image generation from text prompts
+- **Default**: `gemini-3.1-flash-image`
+- **Available**: `gemini-3.1-flash-lite-image`, `gemini-3.1-flash-image`, and `gemini-3-pro-image`
+- **Features**: Native Gemini image generation from text prompts with aspect-ratio and image-size support
+
+Imagen 4 and Gemini 2.5 model classes are no longer included. Existing action configurations using those model IDs are preserved as custom configurations and must be updated manually.
 
 #### Text Summarization Models
-- **Default**: `gemini-2.5-flash`
+- **Default**: `gemini-3.6-flash`
 - **Features**: Intelligent text summarization with configurable instructions
 
 ## Usage

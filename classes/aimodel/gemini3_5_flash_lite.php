@@ -20,22 +20,22 @@ use core_ai\aimodel\base;
 use MoodleQuickForm;
 
 /**
- * Gemini 2.5 Flash-Lite AI model.
+ * Gemini 3.5 Flash-Lite model.
  *
  * @package    aiprovider_gemini
- * @copyright  University of Ferrara, Italy
- * @author     Andrea Bertelli <andrea.bertell@unife.it>
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @copyright 2026 University of Ferrara, Italy
+ * @author    Andrea Bertelli <andrea.bertelli@unife.it>
+ * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class gemini2_5_flash_lite extends base implements gemini_base {
+class gemini3_5_flash_lite extends base implements gemini_base {
     #[\Override]
     public function get_model_name(): string {
-        return 'gemini-2.5-flash-lite';
+        return 'gemini-3.5-flash-lite';
     }
 
     #[\Override]
     public function get_model_display_name(): string {
-        return 'Gemini 2.5 Flash-Lite';
+        return 'Gemini 3.5 Flash-Lite';
     }
 
     #[\Override]
@@ -44,23 +44,16 @@ class gemini2_5_flash_lite extends base implements gemini_base {
     }
 
     /**
-     * Get the endpoint for Gemini 2.5 Flash-Lite.
-     * @return string The endpoint URL.ß
+     * Get the endpoint for Gemini 3.5 Flash-Lite.
+     *
+     * @return string The endpoint URL.
      */
     public function get_endpoint(): string {
-        return 'https://generativelanguage.googleapis.com/v1beta/models/' . $this->get_model_name() . ':generateContent';
+        return 'https://generativelanguage.googleapis.com/v1beta/interactions';
     }
 
     #[\Override]
     public function add_model_settings(MoodleQuickForm $mform): void {
-        $mform->addElement(
-            'text',
-            'topP',
-            get_string('settings_top_p', 'aiprovider_gemini'),
-        );
-        $mform->setType('topP', PARAM_FLOAT);
-        $mform->addHelpButton('topP', 'settings_top_p', 'aiprovider_gemini');
-
         $mform->addElement(
             'text',
             'maxOutputTokens',

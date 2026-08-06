@@ -54,12 +54,27 @@ abstract class abstract_processor extends process_base {
     }
 
     /**
+     * Get the model reported by Gemini, falling back to the configured model.
+     *
+     * Interactions responses use `model`, while generateContent responses use
+     * `modelVersion`. Legacy custom endpoints may omit both fields.
+     *
+     * @param object $responsebody Decoded Gemini response body.
+     * @return string The model used for the response.
+     */
+    protected function get_response_model(object $responsebody): string {
+        $model = $responsebody->model ?? $responsebody->modelVersion ?? null;
+        return !empty($model) ? (string) $model : $this->get_model();
+    }
+
+    /**
      * Get the system instructions.
      *
      * @return string
      */
     protected function get_system_instruction(): string {
-        return $this->action::get_system_instruction();
+        $settings = $this->provider->actionconfig[$this->action::class]['settings'] ?? [];
+        return $settings['systeminstruction'] ?? $this->action::get_system_instruction();
     }
 
     /**
@@ -85,18 +100,58 @@ abstract class abstract_processor extends process_base {
             $settings['providerid'],
             $settings['modelextraparams'],
         );
+
+        // These sampling parameters are deprecated for the current and future Gemini models.
+        return $this->remove_deprecated_sampling_parameters($settings);
+    }
+
+    /**
+     * Remove deprecated sampling parameters from a settings tree.
+     *
+     * @param array $settings Settings to sanitise.
+     * @return array Sanitised settings.
+     */
+    private function remove_deprecated_sampling_parameters(array $settings): array {
+        $deprecated = ['temperature', 'top_p', 'top_k', 'topp', 'topk'];
+        foreach ($settings as $key => $value) {
+            if (in_array(strtolower((string) $key), $deprecated, true)) {
+                unset($settings[$key]);
+            } else if (is_array($value)) {
+                $settings[$key] = $this->remove_deprecated_sampling_parameters($value);
+            }
+        }
         return $settings;
     }
 
     /**
-     * Create the request object to send to the OpenAI API.
+     * Get the API transport from the configured endpoint.
+     *
+     * This also preserves support for existing custom action configurations.
+     *
+     * @return string API transport.
+     */
+    protected function get_api_type(): string {
+        $endpoint = rtrim((string) $this->get_endpoint(), '/');
+        if (str_ends_with($endpoint, ':predict')) {
+            return \aiprovider_gemini\aimodel\gemini_base::API_PREDICT;
+        }
+        if (str_ends_with($endpoint, ':generateContent')) {
+            return \aiprovider_gemini\aimodel\gemini_base::API_GENERATE_CONTENT;
+        }
+        if (str_ends_with($endpoint, '/interactions')) {
+            return \aiprovider_gemini\aimodel\gemini_base::API_INTERACTIONS;
+        }
+        return \aiprovider_gemini\aimodel\gemini_base::API_GENERATE_CONTENT;
+    }
+
+    /**
+     * Create the request object to send to the Gemini API.
      *
      * This object contains all the required parameters for the request.
      *
      *
-     *
      * @param string $userid The user id.
-     * @return RequestInterface The request object to send to the OpenAI API.
+     * @return RequestInterface The request object to send to the Gemini API.
      */
     abstract protected function create_request_object(
         string $userid,
@@ -127,11 +182,11 @@ abstract class abstract_processor extends process_base {
             ]);
         } catch (RequestException $e) {
             // Handle any exceptions.
-            return [
-                'success' => false,
-                'errorcode' => $e->getCode(),
-                'errormessage' => $e->getMessage(),
-            ];
+            // Guzzle can report a zero code for transport errors. The core AI
+            // error factory requires a valid error code, so map those errors
+            // to a server failure while preserving the original message.
+            $errorcode = $e->getCode() > 0 ? $e->getCode() : 500;
+            return \core_ai\error\factory::create($errorcode, $e->getMessage())->get_error_details();
         }
         // Double-check the response codes, in case of a non 200 that didn't throw an error.
         $status = $response->getStatusCode();
@@ -149,19 +204,14 @@ abstract class abstract_processor extends process_base {
      * @return array The error response.
      */
     protected function handle_api_error(ResponseInterface $response): array {
-        $responsearr = [
-            'success' => false,
-            'errorcode' => $response->getStatusCode(),
-        ];
-
         $status = $response->getStatusCode();
         if ($status >= 500 && $status < 600) {
-            $responsearr['errormessage'] = $response->getReasonPhrase();
+            $errormessage = $response->getReasonPhrase();
         } else {
-            $bodyobj = json_decode($response->getBody()->getContents());
-            $responsearr['errormessage'] = $bodyobj->error->message;
+            $bodyobj = json_decode((string) $response->getBody());
+            $errormessage = $bodyobj->error->message ?? $response->getReasonPhrase();
         }
 
-        return $responsearr;
+        return \core_ai\error\factory::create($status, $errormessage)->get_error_details();
     }
 }
