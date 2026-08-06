@@ -23,7 +23,7 @@ use core_privacy\local\request\contextlist;
 use core_privacy\local\request\userlist;
 
 /**
- * Privacy provider implementation for OpenAI provider
+ * Privacy provider implementation for Gemini provider
  *
  * @package    aiprovider_gemini
  * @copyright  2025 University of Ferrara, Italy

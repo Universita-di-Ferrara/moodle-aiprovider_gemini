@@ -131,14 +131,13 @@ abstract class abstract_processor extends process_base {
     }
 
     /**
-     * Create the request object to send to the OpenAI API.
+     * Create the request object to send to the Gemini API.
      *
      * This object contains all the required parameters for the request.
      *
      *
-     *
      * @param string $userid The user id.
-     * @return RequestInterface The request object to send to the OpenAI API.
+     * @return RequestInterface The request object to send to the Gemini API.
      */
     abstract protected function create_request_object(
         string $userid,
