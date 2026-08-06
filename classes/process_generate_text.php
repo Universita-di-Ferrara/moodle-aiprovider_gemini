@@ -103,6 +103,7 @@ class process_generate_text extends abstract_processor {
                 'finishreason' => 'stop',
                 'prompttokens' => $usage->input_tokens ?? 0,
                 'completiontokens' => $usage->output_tokens ?? 0,
+                'model' => $this->get_response_model($responsebody),
             ];
         }
 
@@ -116,6 +117,7 @@ class process_generate_text extends abstract_processor {
             'finishreason' => $bodycandidate->finishReason ?? 'unknown',
             'prompttokens' => $usagemetadata->promptTokenCount ?? 0,
             'completiontokens' => $usagemetadata->candidatesTokenCount ?? $usagemetadata->totalTokenCount ?? 0,
+            'model' => $this->get_response_model($responsebody),
         ];
     }
 

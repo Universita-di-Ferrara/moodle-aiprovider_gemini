@@ -91,6 +91,7 @@ final class process_generate_text_test extends \advanced_testcase {
         $method = new \ReflectionMethod($processor, 'handle_api_success');
         $response = new \GuzzleHttp\Psr7\Response(200, [], json_encode([
             'id' => 'interaction-1',
+            'model' => 'gemini-3.6-flash',
             'steps' => [
                 ['type' => 'model_output', 'content' => [['type' => 'text', 'text' => 'Hi there']]],
             ],
@@ -100,5 +101,32 @@ final class process_generate_text_test extends \advanced_testcase {
         $this->assertTrue($result['success']);
         $this->assertSame('interaction-1', $result['id']);
         $this->assertSame('Hi there', $result['generatedcontent']);
+        $this->assertSame('gemini-3.6-flash', $result['model']);
+    }
+
+    /**
+     * Test that generateContent responses use modelVersion.
+     */
+    public function test_generate_content_response_model(): void {
+        $provider = $this->create_provider(generate_text::class, [
+            'model' => 'gemini-3-flash-preview',
+            'endpoint' => 'https://generativelanguage.googleapis.com/v1beta/models/' .
+                'gemini-3-flash-preview:generateContent',
+        ]);
+        $action = new generate_text(contextid: 1, userid: 1, prompttext: 'Hello');
+        $processor = new process_generate_text($provider, $action);
+        $method = new \ReflectionMethod($processor, 'handle_api_success');
+        $response = new \GuzzleHttp\Psr7\Response(200, [], json_encode([
+            'modelVersion' => 'gemini-3-flash-preview-001',
+            'responseId' => 'generate-content-1',
+            'candidates' => [[
+                'finishReason' => 'STOP',
+                'content' => ['parts' => [['text' => 'Hi there']]],
+            ]],
+        ]));
+        $result = $method->invoke($processor, $response);
+
+        $this->assertTrue($result['success']);
+        $this->assertSame('gemini-3-flash-preview-001', $result['model']);
     }
 }

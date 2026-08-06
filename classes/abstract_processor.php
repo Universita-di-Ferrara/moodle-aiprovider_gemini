@@ -54,6 +54,20 @@ abstract class abstract_processor extends process_base {
     }
 
     /**
+     * Get the model reported by Gemini, falling back to the configured model.
+     *
+     * Interactions responses use `model`, while generateContent responses use
+     * `modelVersion`. Legacy custom endpoints may omit both fields.
+     *
+     * @param object $responsebody Decoded Gemini response body.
+     * @return string The model used for the response.
+     */
+    protected function get_response_model(object $responsebody): string {
+        $model = $responsebody->model ?? $responsebody->modelVersion ?? null;
+        return !empty($model) ? (string) $model : $this->get_model();
+    }
+
+    /**
      * Get the system instructions.
      *
      * @return string

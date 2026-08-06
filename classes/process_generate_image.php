@@ -235,6 +235,7 @@ class process_generate_image extends abstract_processor {
         return [
             'success' => true,
             'imagebase64' => $imagebase64,
+            'model' => $this->get_response_model($bodyobj),
         ];
     }
 

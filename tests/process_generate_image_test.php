@@ -81,12 +81,14 @@ final class process_generate_image_test extends \advanced_testcase {
         $method = new \ReflectionMethod($processor, 'handle_api_success');
         $response = new \GuzzleHttp\Psr7\Response(200, [], json_encode([
             'id' => 'interaction-image-1',
+            'model' => 'gemini-3.1-flash-image',
             'output_image' => ['data' => 'aW1hZ2U='],
         ]));
         $result = $method->invoke($processor, $response);
 
         $this->assertTrue($result['success']);
         $this->assertSame('aW1hZ2U=', $result['imagebase64']);
+        $this->assertSame('gemini-3.1-flash-image', $result['model']);
     }
 
     /**
